@@ -8,20 +8,27 @@ from bs4 import BeautifulSoup
 
 from urllib.request import urlopen
 
+import requests
 import time
 
 from JungoNara import JungoNara
+from dbControl.connect_db import connectDB
+from dbControl.close_connection import close_connection
+from dbControl.insert_product import insert_product
+
+from URLCache import URLCache
 import utils
+import imageToS3
 
 class Cellphone(JungoNara):
-    def __init__(self, base_url, delay_time=None, saving_html=False):
+    def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
         super().__init__(delay_time, saving_html)
         self.base_url = base_url
         self.jungo_url = "https://cafe.naver.com"
-
+        self.bucket_name = bucket_name
     def _dynamic_crawl(self, driver, url: str) -> str:
         assert url.startswith(self.jungo_url), "Given url does not seem to be from cellphone category."
-        
+                
         driver.get(url)
 
         # sleep
@@ -61,12 +68,11 @@ class Cellphone(JungoNara):
             return
 
         product_detail = soup.find('div', class_="product_detail")
-        #se_module = soup.find_all('div', class_="se-section se-section-text se-l-default")
+        se_module = soup.find_all('div', class_="se-section se-section-text se-l-default")
         images = soup.find_all('img', class_="se-image-resource")
         profile = soup.find('div', class_="profile_area")
 
         product_detail_box = product_detail.find('div', class_="product_detail_box")
-        commercialDetail = product_detail.select('div > div.section > dl')
 
 
         # HTML 파싱을 위한 BeautifulSoup 객체 생성    # 정보를 추출할 태그 목록
@@ -91,67 +97,80 @@ class Cellphone(JungoNara):
                 # 해당 태그가 없으면 결과에 None 저장
                 results[tag] = None
 
-        # for i, v in results.items():
-        #     print(i, v)
 
-        map = pd.DataFrame([{
-                "product_name": product_detail_box.find('p', class_='ProductName').text,
-                "product_price": product_detail_box.find('div', class_="ProductPrice").text,
-                "membership": profile.find('em', class_='nick_level').text,
-                "post_data": profile.find('div', class_="article_info").find('span', class_='date').text,
-                "product_state": results['상품 상태'],
-                "trade": results['결제 방법'],
-                "delivery" : results['배송 방법'],
-                "region" : results['거래 지역']
-            }])
-        for i, v in map.items():
-            print(i, v)
-        # 데이터 추가
-        #final_df = pd.concat([final_df, map], ignore_index=True)
-
-
+        product_name = product_detail_box.find('p', class_='ProductName').text
+        product_price = product_detail_box.find('div', class_="ProductPrice").text
+        membership = profile.find('em', class_='nick_level').text
+        post_date = profile.find('div', class_="article_info").find('span', class_='date').text
+        product_state = results['상품 상태']
+        trade = results['결제 방법']
+        delivery = results['배송 방법']
+        region = results['거래 지역']
+            
+    
         # # 상품 소개
-        # product_dec = se_module.select('div > p > span')
-        # for p in product_dec:
-        #     print(p.text)
+        # 각 div 태그 내에서 'div > p > span'에 해당하는 모든 span 태그를 찾기
+        span_texts = []
+        for module in se_module:
+            spans = module.select('div > p > span')
+            for span in spans:
+                span_texts.append(span.get_text(strip=True))
 
-        # 이미지 temp
-        t = 0
+        # span 텍스트들을 줄바꿈 문자로 연결
+        description_text = "\n".join(span_texts)
 
+        # 데이터베이스 연결
+        conn = connectDB()
+
+        # 상품 데이터 삽입
+        post_id = insert_product(conn, product_name, product_price, membership,
+                       post_date, product_state, trade, delivery, region, description_text
+                       )
+        
+        # 연결 종료
+        close_connection(conn)
+        
+        # 
+        temp_num = 1
         # 이미지 크롤링
-        # for img in images:
-        #     try:
-        #         url = img['src']
-        #         try:
-        #             with urlopen(url) as f:
-        #                 #print(url)
-        #                 with open('./images/img' + str(i) + '_' + str(t) + '.jpg', 'wb') as h:
-        #                     img = f.read()
-        #                     h.write(img)
-        #                     t += 1
-        #         except:
-        #             continue
-        #     except:
-        #         continue
-
+        for img in images:
+            try:
+                url = img['src']
+                image_bytes = imageToS3.download_image(url)
+                s3_path = f'images/image_{post_id}_{temp_num}.jpg'
+                temp += 1
+                imageToS3.upload_to_s3(self.bucket_name, s3_path, image_bytes)
+            except requests.RequestException as e:
+                print(f"Failed to download {url}: {e}")
+            except Exception as e:
+                print(f"Failed to upload to S3: {e}")
         # 브라우저 초기화
         driver.switch_to.default_content()
     
 if __name__ == "__main__":
     driver = utils.get_driver() # WebDriver 초기화
     cellphone_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L"
-    Cellphone = Cellphone(cellphone_url)
+    bucket_name = "cellphone"
+
+    Cellphone = Cellphone(cellphone_url, bucket_name)
+    url_cache = URLCache()
 
     try:
         while True:
-            new_posts = utils.listUp(cellphone_url)
-            new_posts = [Cellphone.jungo_url + url for url in new_posts if not utils.check_visited(url)]
+            # new_posts 초기화
+            new_posts = []
+
+            # 주어진 URL 목록을 순회하면서 캐시에 없는 URL만 처리
+            for url in utils.listUp(cellphone_url):
+                full_url = Cellphone.jungo_url + url
+                if not url_cache.is_cached(url):
+                    new_posts.append(full_url)  # 캐시에 없는 URL에 접두어를 붙여 new_posts에 추가
+                    url_cache.add_to_cache(url)  # 캐시에 URL을 추가
 
             for post_url in new_posts:
                 print(f"Crawling {post_url}")
                 Cellphone.dynamic_crawl(driver, post_url)
-                utils.check_visited(post_url)
             
-            time.sleep(60) # 1분마다 새 게시물 확인
+            time.sleep(randint(30, 50)) # 1분마다 새 게시물 확인
     finally:
         driver.quit() # Webdriver 종료

@@ -8,18 +8,6 @@ import requests
 import time
 
 
-@lru_cache(maxsize=50)
-def check_visited(url):
-    """
-        이 함수는 주어진 URL이 이미 방문했는지 체크함.
-        LRU 캐시에 저장되어 있으면 True, 아니면 False를 반환하고 저장함.
-
-        maxsize = 50이므로 최대 50개의 게시물의 url을 캐시에 저장할 수 있음.
-    """
-    return False
-
-
-
 def get_driver():
     """WebDriver 인스턴스를 생성하고 반환함."""
     options = webdriver.ChromeOptions()
