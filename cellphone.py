@@ -150,7 +150,7 @@ class Cellphone(JungoNara):
 if __name__ == "__main__":
     driver = utils.get_driver() # WebDriver 초기화
     cellphone_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L"
-    bucket_name = "cellphone"
+    bucket_name = "c2c-trade-image"
 
     Cellphone = Cellphone(cellphone_url, bucket_name)
     url_cache = URLCache()

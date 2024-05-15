@@ -4,7 +4,7 @@ def create_product_table(conn):
     CREATE TABLE products (
         id SERIAL PRIMARY KEY,
         title VARCHAR(64) NOT NULL,
-        price INTEGER NOT NULL,
+        price VARCHAR(15) NOT NULL,
         member_level VARCHAR(10) NOT NULL,
         post_date TIMESTAMP WITH TIME ZONE NOT NULL,
         product_status VARCHAR(100),

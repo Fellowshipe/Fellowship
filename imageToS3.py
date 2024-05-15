@@ -1,5 +1,8 @@
 import requests
-from boto3.session import Session
+import boto3
+
+from dotenv import load_dotenv
+import os
 
 def download_image(url):
     """주어진 URL에서 이미지를 다운로드하고 바이트 데이터를 반환합니다."""
@@ -8,8 +11,22 @@ def download_image(url):
     return response.content
 
 def upload_to_s3(bucket_name, s3_path, image_bytes):
-    """이미지 바이트 데이터를 S3의 지정된 경로에 업로드합니다."""
-    session = Session()  # AWS 자격 증명과 구성을 사용하여 세션 생성
-    s3 = session.resource('s3')
-    s3_object = s3.Object(bucket_name, s3_path)
-    s3_object.put(Body=image_bytes)  # S3에 이미지 데이터 업로드
+    try:
+        load_dotenv()
+
+        key_id=os.getenv('AWS_ACCESS_KEY_ID')
+        access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+
+        """이미지 바이트 데이터를 S3의 지정된 경로에 업로드합니다."""
+        s3_client = boto3(
+            's3',  
+            aws_access_key_id = key_id,
+            aws_secret_access_key = access_key
+        )
+        s3_client.upload_file(
+            s3_path,
+            bucket_name,
+            image_bytes
+        )
+    except Exception as e:
+        print(f"Upload Error occurred: {e}")
