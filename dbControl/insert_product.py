@@ -22,7 +22,6 @@ def insert_product(conn,
                 payment_method, shipping_method, transaction_region, description)
         cur.execute(query, data)
 
-        new_id = cur.fetchone()[0]  # 삽입된 행의 ID를 가져옵니다.
 
         conn.commit()
         cur.close()
@@ -32,4 +31,3 @@ def insert_product(conn,
         conn.rollback()
         cur.close()
         return False
-    return new_id

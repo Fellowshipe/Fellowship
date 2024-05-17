@@ -1,5 +1,6 @@
 import requests
 import boto3
+from io import BytesIO
 
 from dotenv import load_dotenv
 import os
@@ -10,7 +11,7 @@ def download_image(url):
     response.raise_for_status()  # 4xx 또는 5xx 응답을 확인하고 예외를 발생시킵니다.
     return response.content
 
-def upload_to_s3(bucket_name, s3_path, image_bytes):
+def upload_to_s3(bucket_name, image_bytes, file_name):
     try:
         load_dotenv()
 
@@ -23,10 +24,15 @@ def upload_to_s3(bucket_name, s3_path, image_bytes):
             aws_access_key_id = key_id,
             aws_secret_access_key = access_key
         )
+
+        # 바이트 데이터를 BytesIO 객체로 변환
+        image_io = BytesIO(image_bytes)
+
+
         s3_client.upload_file(
-            s3_path,
+            image_io,
             bucket_name,
-            image_bytes
+            file_name
         )
     except Exception as e:
         print(f"Upload Error occurred: {e}")

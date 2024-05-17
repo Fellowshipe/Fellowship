@@ -137,9 +137,9 @@ class Cellphone(JungoNara):
             try:
                 url = img['src']
                 image_bytes = imageToS3.download_image(url)
-                s3_path = f'images/image_{post_id}_{temp_num}.jpg'
+                file_name = f'images/image_{post_id}_{temp_num}.jpg'
                 temp += 1
-                imageToS3.upload_to_s3(self.bucket_name, s3_path, image_bytes)
+                imageToS3.upload_to_s3(self.bucket_name, image_bytes, file_name)
             except requests.RequestException as e:
                 print(f"Failed to download {url}: {e}")
             except Exception as e:
