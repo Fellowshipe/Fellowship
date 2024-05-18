@@ -12,8 +12,8 @@ def get_driver():
     """WebDriver 인스턴스를 생성하고 반환함."""
     options = webdriver.ChromeOptions()
     #options.add_argument('Chrome/123.0.6312.122')
-    options.add_argument('log-level=3')
-    options.add_argument('headless')
+    options.add_argument("--no-sandbox")
+    #options.add_argument('--headless')
     driver = webdriver.Chrome(options=options)
 
     return driver

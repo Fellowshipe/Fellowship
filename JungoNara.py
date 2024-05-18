@@ -18,7 +18,7 @@ class JungoNara():
         self.delay_time = delay_time
         self.saving_html = saving_html
 
-    def dynamic_crawl(self, driver, url: str | list[str]) -> list[str]:
+    def dynamic_crawl(self, url: str | list[str]) -> list[str]:
 
         """
         Return article text using Selenium.
@@ -33,9 +33,9 @@ class JungoNara():
         """
 
         if type(url) == str:
-            return [self._dynamic_crawl(driver, url)]
+            return [self._dynamic_crawl(url)]
         elif type(url) == list:
-            return [self._dynamic_crawl(driver, url_str) for url_str in url]
+            return [self._dynamic_crawl(url_str) for url_str in url]
         else: raise TypeError("You must give url string or list type.")
 
     @abstractmethod

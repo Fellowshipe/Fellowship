@@ -17,10 +17,12 @@ def upload_to_s3(bucket_name, image_bytes, file_name):
 
         key_id=os.getenv('AWS_ACCESS_KEY_ID')
         access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+        region=os.getenv('ap-northeast-2')
 
         """이미지 바이트 데이터를 S3의 지정된 경로에 업로드합니다."""
-        s3_client = boto3(
-            's3',  
+        s3_client = boto3.client(
+            service_name='s3',  
+            region_name = region,
             aws_access_key_id = key_id,
             aws_secret_access_key = access_key
         )
@@ -28,11 +30,13 @@ def upload_to_s3(bucket_name, image_bytes, file_name):
         # 바이트 데이터를 BytesIO 객체로 변환
         image_io = BytesIO(image_bytes)
 
+        print(file_name)
 
-        s3_client.upload_file(
+        s3_client.upload_fileobj(
             image_io,
             bucket_name,
             file_name
         )
+        print("이미지 업로드 성공")
     except Exception as e:
         print(f"Upload Error occurred: {e}")

@@ -10,6 +10,7 @@ from urllib.request import urlopen
 
 import requests
 import time
+from selenium import webdriver
 
 from JungoNara import JungoNara
 from dbControl.connect_db import connectDB
@@ -26,46 +27,61 @@ class Cellphone(JungoNara):
         self.base_url = base_url
         self.jungo_url = "https://cafe.naver.com"
         self.bucket_name = bucket_name
-    def _dynamic_crawl(self, driver, url: str) -> str:
-        assert url.startswith(self.jungo_url), "Given url does not seem to be from cellphone category."
-                
-        driver.get(url)
 
-        # sleep
+        options = webdriver.ChromeOptions()
+        #options.add_argument('Chrome/123.0.6312.122')
+        options.add_argument("--no-sandbox")
+        options.add_argument('--headless')
+        self.driver = webdriver.Chrome(options=options)
+
+    def _dynamic_crawl(self, url: str) -> str:        
+        assert url.startswith(self.jungo_url), "Given url does not seem to be from cellphone category."
+
+        self.driver.get(url)
+       
+        time.sleep(3)
+
         if isinstance(self.delay_time, float): time.sleep(self.delay_time)
         elif isinstance(self.delay_time, tuple): time.sleep(float(randint(self.delay_time[0], self.delay_time[1])))
         elif self.delay_time == None: pass
         else: raise TypeError("you must give delay_time float or tuple type.")
         
         # iframe이 로드될 때까지 대기
-        # iframe이 로드될 때까지 대기
-        wait = WebDriverWait(driver, 10)
+        try:
+            wait = WebDriverWait(self.driver, 10)
+        except Exception as e:
+            print(e)
+
         try:
             iframe = wait.until(EC.presence_of_element_located((By.ID, "cafe_main")))
         except:
             print("삭제된 게시물")
             return
+        
         # 브라우저 변환
-        driver.switch_to.frame(iframe)
+        try:
+            self.driver.switch_to.frame(iframe)
+        except Exception as e:
+            print(e)
 
         # 페이지 소스 가져오기
-        html_content = driver.page_source
+        html_content = self.driver.page_source
+        #print(html_content)
 
-        # BeatifulSoup 객체 생성
         soup = BeautifulSoup(html_content, 'html.parser')
-        
+
         # 없는 전화번호, 안심번호 필터링
-        try:
-            tell_tag = soup.find('p', class_='tell')
-            if tell_tag.text == ' ***-****-**** ':
-                print("안심번호 사용중")
-                return
+        # try:
+        #     tell_tag = soup.find('p', class_='tell')
+        #     if tell_tag.text == ' ***-****-**** ':
+        #         print("안심번호 사용중")
+        #         return
                 
-            else:
-                print(tell_tag.text)
-        except:
-            print("전화번호 추출 불가")
-            return
+        #     else:
+        #         print(tell_tag.text)
+        # except:
+        #     print("전화번호 추출 불가")
+        #     return
 
         product_detail = soup.find('div', class_="product_detail")
         se_module = soup.find_all('div', class_="se-section se-section-text se-l-default")
@@ -83,6 +99,7 @@ class Cellphone(JungoNara):
 
         # 'detail_list' 클래스를 가진 모든 'dl' 태그를 찾음
         all_dl = soup.find_all('dl', class_='detail_list')
+
 
 
         # 각 태그 목록에 대해 처리
@@ -123,7 +140,7 @@ class Cellphone(JungoNara):
         conn = connectDB()
 
         # 상품 데이터 삽입
-        post_id = insert_product(conn, product_name, product_price, membership,
+        product_id = insert_product(conn, product_name, product_price, membership,
                        post_date, product_state, trade, delivery, region, description_text
                        )
         
@@ -137,23 +154,25 @@ class Cellphone(JungoNara):
             try:
                 url = img['src']
                 image_bytes = imageToS3.download_image(url)
-                file_name = f'images/image_{post_id}_{temp_num}.jpg'
-                temp += 1
+                file_name = f'imgs/{product_id}_{temp_num}.jpg'
+                temp_num += 1
                 imageToS3.upload_to_s3(self.bucket_name, image_bytes, file_name)
             except requests.RequestException as e:
                 print(f"Failed to download {url}: {e}")
             except Exception as e:
                 print(f"Failed to upload to S3: {e}")
         # 브라우저 초기화
-        driver.switch_to.default_content()
+        self.driver.switch_to.default_content()
     
 if __name__ == "__main__":
-    driver = utils.get_driver() # WebDriver 초기화
-    cellphone_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L"
-    bucket_name = "c2c-trade-image"
+    #driver = utils.get_driver() # WebDriver 초기화
+    cellphone_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=339&search.boardtype=L"
+    bucket_name = "c2c-trade-image'"
 
     Cellphone = Cellphone(cellphone_url, bucket_name)
     url_cache = URLCache()
+
+    #Cellphone.dynamic_crawl(driver, 'https://cafe.naver.com/ArticleRead.nhn?clubid=10050146&page=1&menuid=1156&boardtype=L&articleid=1056735750&referrerAllArticles=false')
 
     try:
         while True:
@@ -169,8 +188,7 @@ if __name__ == "__main__":
 
             for post_url in new_posts:
                 print(f"Crawling {post_url}")
-                Cellphone.dynamic_crawl(driver, post_url)
-            
-            time.sleep(randint(30, 50)) # 1분마다 새 게시물 확인
+                Cellphone.dynamic_crawl(post_url)
+            time.sleep(3) # 1분마다 새 게시물 확인
     finally:
-        driver.quit() # Webdriver 종료
+        Cellphone.driver.quit() # Webdriver 종료
