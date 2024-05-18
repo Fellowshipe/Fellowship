@@ -71,17 +71,17 @@ class Cellphone(JungoNara):
         soup = BeautifulSoup(html_content, 'html.parser')
 
         # 없는 전화번호, 안심번호 필터링
-        # try:
-        #     tell_tag = soup.find('p', class_='tell')
-        #     if tell_tag.text == ' ***-****-**** ':
-        #         print("안심번호 사용중")
-        #         return
+        try:
+            tell_tag = soup.find('p', class_='tell')
+            if tell_tag.text == ' ***-****-**** ':
+                print("안심번호 사용중")
+                return
                 
-        #     else:
-        #         print(tell_tag.text)
-        # except:
-        #     print("전화번호 추출 불가")
-        #     return
+            else:
+                print(tell_tag.text)
+        except:
+            print("전화번호 추출 불가")
+            return
 
         product_detail = soup.find('div', class_="product_detail")
         se_module = soup.find_all('div', class_="se-section se-section-text se-l-default")
