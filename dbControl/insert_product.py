@@ -10,17 +10,18 @@ def insert_product(conn,
                    payment_method, 
                    shipping_method, 
                    transaction_region, 
-                   description):
+                   description,
+                   fraud):
     try:
         cur = conn.cursor()
         query = '''
         INSERT INTO cellphone (title, price, member_level, post_date, product_status, 
-        payment_method, shipping_method, transaction_region, description) 
+        payment_method, shipping_method, transaction_region, description, fraud) 
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
         '''
         data = (title, price, member_level, post_date, product_status, 
-                payment_method, shipping_method, transaction_region, description)
+                payment_method, shipping_method, transaction_region, description, fraud)
         cur.execute(query, data)
         try:
             last_id = cur.fetchone()[0]

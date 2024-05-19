@@ -1,4 +1,3 @@
-import pandas as pd
 from random import randint
 
 from selenium.webdriver.support.ui import WebDriverWait
@@ -6,8 +5,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 
-from urllib.request import urlopen
-
+import json
+import os
+from dotenv import load_dotenv
 import requests
 import time
 from selenium import webdriver
@@ -20,6 +20,7 @@ from dbControl.insert_product import insert_product
 from URLCache import URLCache
 import utils
 import imageToS3
+import thecheatapi
 
 class Cellphone(JungoNara):
     def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
@@ -27,6 +28,10 @@ class Cellphone(JungoNara):
         self.base_url = base_url
         self.jungo_url = "https://cafe.naver.com"
         self.bucket_name = bucket_name
+
+        self.api_url = os.getenv('THE_CHEAT_URL')
+        self.api_key = os.getenv('X-TheCheat-ApiKey')
+        self.enc_key = os.getenv('ENC_KEY')
 
         options = webdriver.ChromeOptions()
         #options.add_argument('Chrome/123.0.6312.122')
@@ -83,6 +88,37 @@ class Cellphone(JungoNara):
             print("전화번호 추출 불가")
             return
 
+        # API 변수 읽기
+        load_dotenv()
+
+        cleaned_number = tell_tag.text.replace(' ', '').replace('-', '')
+
+        request_data = {
+                    "keyword_type": "phone",
+                    "keyword": cleaned_number,
+                    "add_info": ""
+                }
+
+        headers = {
+            'X-TheCheat-ApiKey': self.api_key
+        }
+
+        # 더치트 API 요청 보내기
+        try:
+            response = requests.post(self.api_url, json=request_data, headers=headers)
+            data = response.json()
+            response_temp = thecheatapi.decrypt(data['content'], self.enc_key)
+        except Exception as e:
+            print("API request Error:", {e})
+
+        # 사기 피해 여부
+        fraud_check = json.loads(response_temp)['caution']
+        if fraud_check == 'Y':
+            fraud_check = True
+        else:
+            fraud_check = False
+
+        # 상품 정보 찾기
         product_detail = soup.find('div', class_="product_detail")
         se_module = soup.find_all('div', class_="se-section se-section-text se-l-default")
         images = soup.find_all('img', class_="se-image-resource")
@@ -166,8 +202,8 @@ class Cellphone(JungoNara):
     
 if __name__ == "__main__":
     #driver = utils.get_driver() # WebDriver 초기화
-    cellphone_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=339&search.boardtype=L"
-    bucket_name = "c2c-trade-image'"
+    cellphone_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L"
+    bucket_name = "c2c-trade-image"
 
     Cellphone = Cellphone(cellphone_url, bucket_name)
     url_cache = URLCache()
