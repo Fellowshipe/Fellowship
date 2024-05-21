@@ -29,6 +29,8 @@ class Cellphone(JungoNara):
         self.jungo_url = "https://cafe.naver.com"
         self.bucket_name = bucket_name
 
+        load_dotenv()
+
         self.api_url = os.getenv('THE_CHEAT_URL')
         self.api_key = os.getenv('X-TheCheat-ApiKey')
         self.enc_key = os.getenv('ENC_KEY')
@@ -88,9 +90,6 @@ class Cellphone(JungoNara):
             print("전화번호 추출 불가")
             return
 
-        # API 변수 읽기
-        load_dotenv()
-
         cleaned_number = tell_tag.text.replace(' ', '').replace('-', '')
 
         request_data = {
@@ -110,6 +109,7 @@ class Cellphone(JungoNara):
             response_temp = thecheatapi.decrypt(data['content'], self.enc_key)
         except Exception as e:
             print("API request Error:", {e})
+        
 
         # 사기 피해 여부
         fraud_check = json.loads(response_temp)['caution']
@@ -177,7 +177,7 @@ class Cellphone(JungoNara):
 
         # 상품 데이터 삽입
         product_id = insert_product(conn, product_name, product_price, membership,
-                       post_date, product_state, trade, delivery, region, description_text
+                       post_date, product_state, trade, delivery, region, description_text, fraud_check
                        )
         
         # 연결 종료
