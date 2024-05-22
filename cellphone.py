@@ -177,7 +177,7 @@ class Cellphone(JungoNara):
 
         # 상품 데이터 삽입
         product_id = insert_product(conn, product_name, product_price, membership,
-                       post_date, product_state, trade, delivery, region, description_text, fraud_check
+                       post_date, product_state, trade, delivery, region, description_text, cleaned_number, fraud_check
                        )
         
         # 연결 종료
@@ -190,7 +190,7 @@ class Cellphone(JungoNara):
             try:
                 url = img['src']
                 image_bytes = imageToS3.download_image(url)
-                file_name = f'imgs/{product_id}_{temp_num}.jpg'
+                file_name = f'cellphone/{product_id}_{temp_num}.jpg'
                 temp_num += 1
                 imageToS3.upload_to_s3(self.bucket_name, image_bytes, file_name)
             except requests.RequestException as e:
@@ -202,7 +202,7 @@ class Cellphone(JungoNara):
     
 if __name__ == "__main__":
     #driver = utils.get_driver() # WebDriver 초기화
-    cellphone_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L"
+    cellphone_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=339&search.boardtype=L"
     bucket_name = "c2c-trade-image"
 
     Cellphone = Cellphone(cellphone_url, bucket_name)
@@ -225,6 +225,6 @@ if __name__ == "__main__":
             for post_url in new_posts:
                 print(f"Crawling {post_url}")
                 Cellphone.dynamic_crawl(post_url)
-            time.sleep(3) # 1분마다 새 게시물 확인
+            time.sleep(randint(30, 60)) # 1분마다 새 게시물 확인
     finally:
         Cellphone.driver.quit() # Webdriver 종료
