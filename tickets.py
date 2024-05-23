@@ -17,10 +17,10 @@ from dbControl.connect_db import connectDB
 from dbControl.close_connection import close_connection
 from dbControl.insert_product import insert_product
 
-from URLCache import URLCache
-import utils
-import imageToS3
-import thecheatapi
+from utils.URLCache import URLCache
+import utils.utils as utils
+import utils.imageToS3 as imageToS3
+import utils.thecheatapi as thecheatapi
 
 class Tickets(JungoNara):
     def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
@@ -204,7 +204,9 @@ class Tickets(JungoNara):
 
 if __name__ == "__main__":
     #driver = utils.get_driver() # WebDriver 초기화
-    Tickets_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L"
+    Tickets_url = ["https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L",
+                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1285&search.boardtype=L",
+                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1866&search.boardtype=L"]
     bucket_name = "c2c-trade-image"
 
     Tickets = Tickets(Tickets_url, bucket_name)
@@ -227,6 +229,6 @@ if __name__ == "__main__":
             for post_url in new_posts:
                 print(f"Crawling {post_url}")
                 Tickets.dynamic_crawl(post_url)
-            time.sleep(randint(30, 60)) # 1분마다 새 게시물 확인
+            time.sleep(randint(60, 90)) # 1분마다 새 게시물 확인
     finally:
         Tickets.driver.quit() # Webdriver 종료
