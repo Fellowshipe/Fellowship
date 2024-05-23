@@ -22,7 +22,7 @@ import utils
 import imageToS3
 import thecheatapi
 
-class Cellphone(JungoNara):
+class Tickets(JungoNara):
     def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
         super().__init__(delay_time, saving_html)
         self.base_url = base_url
@@ -42,7 +42,7 @@ class Cellphone(JungoNara):
         self.driver = webdriver.Chrome(options=options)
 
     def _dynamic_crawl(self, url: str) -> str:        
-        assert url.startswith(self.jungo_url), "Given url does not seem to be from cellphone category."
+        assert url.startswith(self.jungo_url), "Given url does not seem to be from Tickets category."
 
         self.driver.get(url)
        
@@ -177,7 +177,7 @@ class Cellphone(JungoNara):
         conn = connectDB()
 
         # 상품 데이터 삽입
-        product_id = insert_product(conn, "cellphone", product_name, product_price, membership,
+        product_id = insert_product(conn, "tickets", product_name, product_price, membership,
                        post_date, product_state, trade, delivery, region, description_text, cleaned_number, fraud_check
                        )
         
@@ -191,26 +191,26 @@ class Cellphone(JungoNara):
             try:
                 url = img['src']
                 image_bytes = imageToS3.download_image(url)
-                file_name = f'cellphone/{product_id}_{temp_num}.jpg'
+                file_name = f'tickets/{product_id}_{temp_num}.jpg'
                 temp_num += 1
                 imageToS3.upload_to_s3(self.bucket_name, image_bytes, file_name)
             except requests.RequestException as e:
                 print(f"Failed to download {url}: {e}")
             except Exception as e:
                 print(f"Failed to upload to S3: {e}")
-
-        #브라우저 초기화
+                
+        # 브라우저 초기화
         self.driver.switch_to.default_content()
 
 if __name__ == "__main__":
     #driver = utils.get_driver() # WebDriver 초기화
-    cellphone_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L"
+    Tickets_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L"
     bucket_name = "c2c-trade-image"
 
-    Cellphone = Cellphone(cellphone_url, bucket_name)
+    Tickets = Tickets(Tickets_url, bucket_name)
     url_cache = URLCache()
 
-    #Cellphone.dynamic_crawl(driver, 'https://cafe.naver.com/ArticleRead.nhn?clubid=10050146&page=1&menuid=1156&boardtype=L&articleid=1056735750&referrerAllArticles=false')
+    #Tickets.dynamic_crawl(driver, 'https://cafe.naver.com/ArticleRead.nhn?clubid=10050146&page=1&menuid=1156&boardtype=L&articleid=1056735750&referrerAllArticles=false')
 
     try:
         while True:
@@ -218,15 +218,15 @@ if __name__ == "__main__":
             new_posts = []
 
             # 주어진 URL 목록을 순회하면서 캐시에 없는 URL만 처리
-            for url in utils.listUp(cellphone_url):
-                full_url = Cellphone.jungo_url + url
+            for url in utils.listUp(Tickets_url):
+                full_url = Tickets.jungo_url + url
                 if not url_cache.is_cached(url):
                     new_posts.append(full_url)  # 캐시에 없는 URL에 접두어를 붙여 new_posts에 추가
                     url_cache.add_to_cache(url)  # 캐시에 URL을 추가
 
             for post_url in new_posts:
                 print(f"Crawling {post_url}")
-                Cellphone.dynamic_crawl(post_url)
+                Tickets.dynamic_crawl(post_url)
             time.sleep(3) # 1분마다 새 게시물 확인
     finally:
-        Cellphone.driver.quit() # Webdriver 종료
+        Tickets.driver.quit() # Webdriver 종료

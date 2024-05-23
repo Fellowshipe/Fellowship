@@ -2,6 +2,7 @@ import psycopg2
 import sys
 
 def insert_product(conn, 
+                   table_name,
                    title, 
                    price, 
                    member_level, 
@@ -15,8 +16,8 @@ def insert_product(conn,
                    is_fraud):
     try:
         cur = conn.cursor()
-        query = '''
-        INSERT INTO cellphone (title, price, member_level, post_date, product_status, 
+        query = f'''
+        INSERT INTO {table_name} (title, price, member_level, post_date, product_status, 
         payment_method, shipping_method, transaction_region, description, phone_num, is_fraud) 
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
