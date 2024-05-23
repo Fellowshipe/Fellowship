@@ -17,10 +17,10 @@ from dbControl.connect_db import connectDB
 from dbControl.close_connection import close_connection
 from dbControl.insert_product import insert_product
 
-from jungoNaraCrawl.utils.URLCache import URLCache
-import jungoNaraCrawl.utils.utils as utils
-import jungoNaraCrawl.utils.imageToS3 as imageToS3
-import jungoNaraCrawl.utils.thecheatapi as thecheatapi
+from utils.URLCache import URLCache
+import utils.utils as utils
+import utils.imageToS3 as imageToS3
+import utils.thecheatapi as thecheatapi
 
 class Cellphone(JungoNara):
     def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
