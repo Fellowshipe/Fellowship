@@ -110,7 +110,7 @@ class Tickets(JungoNara):
         except Exception as e:
             print("API request Error:", {e})
         
-        print(response_temp)
+        #print(response_temp)
 
         # 사기 피해 여부
         fraud_check = json.loads(response_temp)['caution']
