@@ -110,7 +110,7 @@ class Tickets(JungoNara):
         except Exception as e:
             print("API request Error:", {e})
         
-        #print(response_temp)
+        print(response_temp)
 
         # 사기 피해 여부
         fraud_check = json.loads(response_temp)['caution']
@@ -227,6 +227,6 @@ if __name__ == "__main__":
             for post_url in new_posts:
                 print(f"Crawling {post_url}")
                 Tickets.dynamic_crawl(post_url)
-            time.sleep(3) # 1분마다 새 게시물 확인
+            time.sleep(randint(30, 60)) # 1분마다 새 게시물 확인
     finally:
         Tickets.driver.quit() # Webdriver 종료
