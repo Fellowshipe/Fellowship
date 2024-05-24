@@ -177,6 +177,8 @@ class Cellphone(JungoNara):
         conn = connectDB()
 
         # 상품 데이터 삽입
+        # fraud check -> 최근 3개월
+        # MFCC, RNN/LSTM를 활용한 연구 방법을 사용
         product_id = insert_product(conn, "cellphone", product_name, product_price, membership,
                        post_date, product_state, trade, delivery, region, description_text, cleaned_number, fraud_check
                        )
@@ -204,11 +206,14 @@ class Cellphone(JungoNara):
 
 if __name__ == "__main__":
     #driver = utils.get_driver() # WebDriver 초기화
-    cellphone_url = "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L"
+    cellphone_url = ["https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=427&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=749&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=424&search.boardtype=L"]
     bucket_name = "c2c-trade-image"
 
     Cellphone = Cellphone(cellphone_url, bucket_name)
-    url_cache = URLCache()
+    url_cache = URLCache(200)
 
     #Cellphone.dynamic_crawl(driver, 'https://cafe.naver.com/ArticleRead.nhn?clubid=10050146&page=1&menuid=1156&boardtype=L&articleid=1056735750&referrerAllArticles=false')
 
@@ -229,4 +234,4 @@ if __name__ == "__main__":
                 Cellphone.dynamic_crawl(post_url)
             time.sleep(randint(30, 60)) # 1분마다 새 게시물 확인
     finally:
-        Cellphone.driver.quit() # Webdriver 종료
+        Cellphone.driver.quit() # Webdriver 종료 

@@ -206,11 +206,15 @@ if __name__ == "__main__":
     #driver = utils.get_driver() # WebDriver 초기화
     Tickets_url = ["https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L",
                    "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1285&search.boardtype=L",
-                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1866&search.boardtype=L"]
+                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1866&search.boardtype=L",
+                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=448&search.boardtype=L",
+                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1537&search.boardtype=L",
+                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1286&search.boardtype=L",
+                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=2018&search.boardtype=L"]
     bucket_name = "c2c-trade-image"
 
     Tickets = Tickets(Tickets_url, bucket_name)
-    url_cache = URLCache()
+    url_cache = URLCache(350)
 
     #Tickets.dynamic_crawl(driver, 'https://cafe.naver.com/ArticleRead.nhn?clubid=10050146&page=1&menuid=1156&boardtype=L&articleid=1056735750&referrerAllArticles=false')
 
