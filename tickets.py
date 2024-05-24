@@ -213,7 +213,7 @@ if __name__ == "__main__":
     bucket_name = "c2c-trade-image"
 
     Tickets = Tickets(Tickets_url, bucket_name)
-    url_cache = URLCache(350)
+    url_cache = URLCache(300)
 
     #Tickets.dynamic_crawl(driver, 'https://cafe.naver.com/ArticleRead.nhn?clubid=10050146&page=1&menuid=1156&boardtype=L&articleid=1056735750&referrerAllArticles=false')
 
