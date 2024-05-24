@@ -1,8 +1,6 @@
 import pandas as pd
 import string
 from dbControl.connect_db import connectDB
-from db_to_df import fetch_data_from_db
-import os
 
 def process_all_dbms_data(df):
     # 데이터프레임 복사
@@ -62,7 +60,6 @@ def process_all_dbms_data(df):
 if __name__ == "__main__":
     query = "SELECT * FROM cellphone"
     df = pd.read_sql_query(query, connectDB())
-    print(df)
-    
+
     df_processed = process_all_dbms_data(df)
     print(df_processed)
