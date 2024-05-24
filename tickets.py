@@ -210,7 +210,7 @@ if __name__ == "__main__":
                    "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=448&search.boardtype=L",
                    "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1537&search.boardtype=L",
                    "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1286&search.boardtype=L",
-                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=2018&search.boardtype=L"]
+                   ]
     bucket_name = "c2c-trade-image"
 
     Tickets = Tickets(Tickets_url, bucket_name)
