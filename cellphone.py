@@ -63,7 +63,7 @@ class Cellphone(JungoNara):
         try:
             iframe = wait.until(EC.presence_of_element_located((By.ID, "cafe_main")))
         except:
-            print("삭제된 게시물")
+            #print("삭제된 게시물")
             return
         
         # 브라우저 변환
@@ -100,7 +100,7 @@ class Cellphone(JungoNara):
             tell_tag = soup.find('p', class_='tell')
             #print(tell_tag.text)
             if tell_tag.text == ' ***-****-**** ':
-                print("안심번호 사용중")
+                #print("안심번호 사용중")
                 # 상품 설명에서 전화번호 찾기 
                 find_phone = find_phone_number(description_text)
                 if find_phone is None:
@@ -173,14 +173,14 @@ class Cellphone(JungoNara):
                 # 사기 피해 여부
                 if found_response_temp is not None:
                     found_fraud_check = json.loads(found_response_temp)['caution']
-                    print("상품설명", found_fraud_check)
+                    #print("상품설명", found_fraud_check)
             except Exception as e:
                 print("API request Error:", {e})
                 return
         
        
         # 사기 여부 탐지
-        if fraud_check == 'Y' or fraud_check == 'Y':
+        if fraud_check == 'Y' or found_fraud_check == 'Y':
             is_fraud = True
         else:
             is_fraud = False
@@ -238,8 +238,8 @@ class Cellphone(JungoNara):
         else:
             is_find = False
 
-        print("db 저장 전화번호 출력", phone_num)
-        print("is_find", is_find)
+        #print("db 저장 전화번호 출력", phone_num)
+        #print("is_find", is_find)
 
         # 데이터베이스 연결
         conn = connectDB()
@@ -310,7 +310,7 @@ if __name__ == "__main__":
                     url_cache.add_to_cache(url)  # 캐시에 URL을 추가
 
             for post_url in new_posts:
-                print(f"Crawling {post_url}")
+                #print(f"Crawling {post_url}")
                 cellphone.dynamic_crawl(post_url)
             time.sleep(randint(30, 60)) # 1분마다 새 게시물 확인
     finally:

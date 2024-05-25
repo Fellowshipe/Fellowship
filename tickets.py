@@ -180,7 +180,7 @@ class Ticket(JungoNara):
         
        
         # 사기 여부 탐지
-        if fraud_check == 'Y' or fraud_check == 'Y':
+        if fraud_check == 'Y' or found_fraud_check == 'Y':
             is_fraud = True
         else:
             is_fraud = False
