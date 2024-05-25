@@ -176,8 +176,13 @@ class Cellphone(JungoNara):
         else:
             found_fraud_check = None
 
-        # 사기 체크
         is_fraud = fraud_check or found_fraud_check
+        
+        # 사기 체크
+        if fraud_check is not None and found_fraud_check is not None:
+            if found_fraud_check == 'Y':
+                is_fraud = 'Y'
+
         print("사기 체크", is_fraud)
 
         if is_fraud == 'N':
