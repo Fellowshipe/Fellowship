@@ -1,5 +1,3 @@
-from functools import lru_cache
-
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 

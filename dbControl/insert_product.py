@@ -13,17 +13,18 @@ def insert_product(conn,
                    transaction_region, 
                    description,
                    cleaned_number,
-                   is_fraud):
+                   is_fraud,
+                   is_find):
     try:
         cur = conn.cursor()
         query = f'''
         INSERT INTO {table_name} (title, price, member_level, post_date, product_status, 
-        payment_method, shipping_method, transaction_region, description, phone_num, is_fraud) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        payment_method, shipping_method, transaction_region, description, phone_num, is_fraud, is_find) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
         '''
         data = (title, price, member_level, post_date, product_status, 
-                payment_method, shipping_method, transaction_region, description, cleaned_number, is_fraud)
+                payment_method, shipping_method, transaction_region, description, cleaned_number, is_fraud, is_find)
         cur.execute(query, data)
         try:
             last_id = cur.fetchone()[0]

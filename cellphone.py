@@ -21,6 +21,7 @@ from utils.URLCache import URLCache
 import utils.utils as utils
 import utils.imageToS3 as imageToS3
 import utils.thecheatapi as thecheatapi
+from prac import find_phone_number
 
 class Cellphone(JungoNara):
     def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
@@ -82,46 +83,110 @@ class Cellphone(JungoNara):
             tell_tag = soup.find('p', class_='tell')
             if tell_tag.text == ' ***-****-**** ':
                 print("안심번호 사용중")
-                return
-                
-            else:
-                print(tell_tag.text)
+                pass
         except:
             print("전화번호 추출 불가")
-            return
+            pass
+        
+        se_module = soup.find_all('div', class_="se-section se-section-text se-l-default")
 
-        cleaned_number = tell_tag.text.replace(' ', '').replace('-', '')
+        # # 상품 소개
+        # 각 div 태그 내에서 'div > p > span'에 해당하는 모든 span 태그를 찾기
+        span_texts = []
+        for module in se_module:
+            spans = module.select('div > p > span')
+            for span in spans:
+                span_texts.append(span.get_text(strip=True))
 
-        request_data = {
-                    "keyword_type": "phone",
-                    "keyword": cleaned_number,
-                    "add_info": ""
-                }
+        # span 텍스트들을 줄바꿈 문자로 연결
+        description_text = "\n".join(span_texts)
+
+        # 상품설명에서 찾으면 True, 아니면 False
+        is_find = False
+
+        # 핸드폰 번호를 설명란에서 찾으면 가져오고, 없으면 더이상 코드 수행을 시키지 않음
+        try:
+            found_phone_number = find_phone_number(description_text)
+            if found_phone_number is None:
+                print("상품 설명에서도 존재 X")
+                return
+            else:
+                is_find = True
+        except Exception as e:
+            print("Find Cellphone Error", e)
+            return 
+
+        # 프로필에 존재하는 핸드폰 번호
+        try:
+            cleaned_number = tell_tag.text.replace(' ', '').replace('-', '')
+        except:
+            cleaned_number = None
 
         headers = {
             'X-TheCheat-ApiKey': self.api_key
         }
 
-        # 더치트 API 요청 보내기
-        try:
-            response = requests.post(self.api_url, json=request_data, headers=headers)
-            data = response.json()
-            response_temp = thecheatapi.decrypt(data['content'], self.enc_key)
-        except Exception as e:
-            print("API request Error:", {e})
-        
-        print(response_temp)
+        # 더치트 API 요청 보내기 (프로필 전화번호)
+        if cleaned_number is not None:
+            # the Cheat API 요청 데이터
+            request_data = {
+                        "keyword_type": "phone",
+                        "keyword": cleaned_number,
+                        "add_info": ""
+                    }
+            try:
+                response = requests.post(self.api_url, json=request_data, headers=headers)
+                data = response.json()
+                response_temp = thecheatapi.decrypt(data['content'], self.enc_key)
 
-        # 사기 피해 여부
-        fraud_check = json.loads(response_temp)['caution']
-        if fraud_check == 'N':
-            fraud_check = False
+                # 사기 피해 여부
+                if response_temp is not None:
+                    fraud_check = json.loads(response_temp)['caution']
+                    print("프로필", fraud_check)
+                else:
+                    fraud_check = None
+                    print("프로필", fraud_check)
+            except Exception as e:
+                print("API request Error:", {e})
         else:
-            fraud_check = True
+            fraud_check = None
+        
+        if found_phone_number is not None:
+            found_request_data = {
+                    "keyword_type": "phone",
+                    "keyword": found_phone_number,
+                    "add_info": ""
+                 }
+
+            # 더치트 API 요청 보내기 (찾은 전화번호)
+            try:
+                response = requests.post(self.api_url, json=found_request_data, headers=headers)
+                data = response.json()
+                found_response_temp = thecheatapi.decrypt(data['content'], self.enc_key)
+
+                # 사기 피해 여부
+                if found_response_temp is not None:
+                    found_fraud_check = json.loads(found_response_temp)['caution']
+                    print("상품설명", found_fraud_check)
+                else:
+                    found_fraud_check = None
+                    print("상품설명", found_fraud_check)
+            except Exception as e:
+                print("API request Error:", {e})
+        else:
+            found_fraud_check = None
+
+        # 사기 체크
+        is_fraud = fraud_check or found_fraud_check
+        print("사기 체크", is_fraud)
+
+        if is_fraud == 'N':
+            is_fraud = False
+        else:
+            is_fraud = True
 
         # 상품 정보 찾기
         product_detail = soup.find('div', class_="product_detail")
-        se_module = soup.find_all('div', class_="se-section se-section-text se-l-default")
         images = soup.find_all('img', class_="se-image-resource")
         profile = soup.find('div', class_="profile_area")
 
@@ -136,7 +201,6 @@ class Cellphone(JungoNara):
 
         # 'detail_list' 클래스를 가진 모든 'dl' 태그를 찾음
         all_dl = soup.find_all('dl', class_='detail_list')
-
 
 
         # 각 태그 목록에 대해 처리
@@ -160,18 +224,14 @@ class Cellphone(JungoNara):
         trade = results['결제 방법']
         delivery = results['배송 방법']
         region = results['거래 지역']
-            
-    
-        # # 상품 소개
-        # 각 div 태그 내에서 'div > p > span'에 해당하는 모든 span 태그를 찾기
-        span_texts = []
-        for module in se_module:
-            spans = module.select('div > p > span')
-            for span in spans:
-                span_texts.append(span.get_text(strip=True))
+        
+        # 둘 다 존재하면, 띄어쓰기해서 저장
+        if cleaned_number is not None and found_phone_number is not None:
+            phone_num = cleaned_number + ' ' + found_phone_number
+        else:
+            phone_num = cleaned_number or found_phone_number
 
-        # span 텍스트들을 줄바꿈 문자로 연결
-        description_text = "\n".join(span_texts)
+        print("db 저장 전화번호 출력", phone_num)
 
         # 데이터베이스 연결
         conn = connectDB()
@@ -179,9 +239,21 @@ class Cellphone(JungoNara):
         # 상품 데이터 삽입
         # fraud check -> 최근 3개월
         # MFCC, RNN/LSTM를 활용한 연구 방법을 사용
-        product_id = insert_product(conn, "cellphone", product_name, product_price, membership,
-                       post_date, product_state, trade, delivery, region, description_text, cleaned_number, fraud_check
-                       )
+        product_id = insert_product(conn, 
+                                    "cellphone", 
+                                    product_name, 
+                                    product_price, 
+                                    membership,
+                                    post_date, 
+                                    product_state, 
+                                    trade, 
+                                    delivery, 
+                                    region, 
+                                    description_text, 
+                                    phone_num, 
+                                    is_fraud,
+                                    is_find
+                                )
         
         # 연결 종료
         close_connection(conn)
