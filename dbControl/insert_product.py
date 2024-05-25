@@ -12,7 +12,7 @@ def insert_product(conn,
                    shipping_method, 
                    transaction_region, 
                    description,
-                   cleaned_number,
+                   phone_num,
                    is_fraud,
                    is_find):
     try:
@@ -24,7 +24,7 @@ def insert_product(conn,
         RETURNING id
         '''
         data = (title, price, member_level, post_date, product_status, 
-                payment_method, shipping_method, transaction_region, description, cleaned_number, is_fraud, is_find)
+                payment_method, shipping_method, transaction_region, description, phone_num, is_fraud, is_find)
         cur.execute(query, data)
         try:
             last_id = cur.fetchone()[0]
