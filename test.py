@@ -1,4 +1,4 @@
-fraud_check = 'Y'
+fraud_check = None
 found_fraud_check = 'N'
 
 is_fraud = fraud_check or found_fraud_check

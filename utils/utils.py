@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import requests
 import time
 
+from prac import find_phone_number
 
 def get_driver():
     """WebDriver 인스턴스를 생성하고 반환함."""
@@ -74,4 +75,5 @@ def request(url):
     return response.text
         
 
-
+def find_phone_num_in_description(description_text):
+    return find_phone_number(description_text)

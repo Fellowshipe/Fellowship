@@ -43,7 +43,7 @@ class Cellphone(JungoNara):
         self.driver = webdriver.Chrome(options=options)
 
     def _dynamic_crawl(self, url: str) -> str:        
-        assert url.startswith(self.jungo_url), "Given url does not seem to be from cellphone category."
+        assert url.startswith(self.jungo_url), "Given url does not seem to be from cellphoe category."
 
         self.driver.get(url)
        
@@ -78,16 +78,7 @@ class Cellphone(JungoNara):
 
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # 없는 전화번호, 안심번호 필터링
-        try:
-            tell_tag = soup.find('p', class_='tell')
-            if tell_tag.text == ' ***-****-**** ':
-                print("안심번호 사용중")
-                pass
-        except:
-            print("전화번호 추출 불가")
-            pass
-        
+
         se_module = soup.find_all('div', class_="se-section se-section-text se-l-default")
 
         # # 상품 소개
@@ -101,32 +92,49 @@ class Cellphone(JungoNara):
         # span 텍스트들을 줄바꿈 문자로 연결
         description_text = "\n".join(span_texts)
 
-        # 상품설명에서 찾으면 True, 아니면 False
-        is_find = False
 
-        # 핸드폰 번호를 설명란에서 찾으면 가져오고, 없으면 더이상 코드 수행을 시키지 않음
-        try:
-            found_phone_number = find_phone_number(description_text)
-            if found_phone_number is None:
-                print("상품 설명에서도 존재 X")
-                return
-            else:
-                is_find = True
-        except Exception as e:
-            print("Find Cellphone Error", e)
-            return 
+        is_tell = False
 
-        # 프로필에 존재하는 핸드폰 번호
+        # 없는 전화번호, 안심번호 필터링
         try:
-            cleaned_number = tell_tag.text.replace(' ', '').replace('-', '')
+            tell_tag = soup.find('p', class_='tell')
+            #print(tell_tag.text)
+            if tell_tag.text == ' ***-****-**** ':
+                print("안심번호 사용중")
+                # 상품 설명에서 전화번호 찾기 
+                find_phone = find_phone_number(description_text)
+                if find_phone is None:
+                    print("상품 설명도 존재 x")
+                    return
+            print("프로필에서 번호 추출 완료")
+            is_tell = True
+            find_phone = find_phone_number(description_text)
+            if find_phone is None:
+                print("프로필에서는 존재하지만 상품 설명에서는 번호 존재 X")
         except:
-            cleaned_number = None
-
+            print("전화번호 추출 불가")
+            find_phone = find_phone_number(description_text)
+            if find_phone is None:
+                print("상품 설명도 존재 x")
+                return
+            
+        # API 요청 header 설정
         headers = {
             'X-TheCheat-ApiKey': self.api_key
         }
 
-        # 더치트 API 요청 보내기 (프로필 전화번호)
+        # 초기화
+        fraud_check = 'N'
+        found_fraud_check = 'N'
+
+        # 전처리 전화번호 초기화
+        cleaned_number = None
+
+        # 전화번호 전처리
+        if is_tell == True:
+            cleaned_number = tell_tag.text.replace(' ', '').replace('-', '')
+
+            # 더치트 API 요청 보내기 (프로필 전화번호)
         if cleaned_number is not None:
             # the Cheat API 요청 데이터
             request_data = {
@@ -143,18 +151,16 @@ class Cellphone(JungoNara):
                 if response_temp is not None:
                     fraud_check = json.loads(response_temp)['caution']
                     print("프로필", fraud_check)
-                else:
-                    fraud_check = None
-                    print("프로필", fraud_check)
             except Exception as e:
                 print("API request Error:", {e})
-        else:
-            fraud_check = None
+                return
         
-        if found_phone_number is not None:
+
+        # 상품 설명 전화번호 API 요청
+        if find_phone is not None:
             found_request_data = {
                     "keyword_type": "phone",
-                    "keyword": found_phone_number,
+                    "keyword": find_phone,
                     "add_info": ""
                  }
 
@@ -168,27 +174,17 @@ class Cellphone(JungoNara):
                 if found_response_temp is not None:
                     found_fraud_check = json.loads(found_response_temp)['caution']
                     print("상품설명", found_fraud_check)
-                else:
-                    found_fraud_check = None
-                    print("상품설명", found_fraud_check)
             except Exception as e:
                 print("API request Error:", {e})
-        else:
-            found_fraud_check = None
-
-        is_fraud = fraud_check or found_fraud_check
+                return
         
-        # 사기 체크
-        if fraud_check is not None and found_fraud_check is not None:
-            if found_fraud_check == 'Y':
-                is_fraud = 'Y'
-
-        print("사기 체크", is_fraud)
-
-        if is_fraud == 'N':
-            is_fraud = False
-        else:
+       
+        # 사기 여부 탐지
+        if fraud_check == 'Y' or fraud_check == 'Y':
             is_fraud = True
+        else:
+            is_fraud = False
+        
 
         # 상품 정보 찾기
         product_detail = soup.find('div', class_="product_detail")
@@ -231,12 +227,19 @@ class Cellphone(JungoNara):
         region = results['거래 지역']
         
         # 둘 다 존재하면, 띄어쓰기해서 저장
-        if cleaned_number is not None and found_phone_number is not None:
-            phone_num = cleaned_number + ' ' + found_phone_number
+        if cleaned_number is not None and find_phone is not None:
+            phone_num = cleaned_number + ' ' + find_phone
         else:
-            phone_num = cleaned_number or found_phone_number
+            phone_num = cleaned_number or find_phone
+
+        # 상품에서만 존재하는지 아닌지 확인
+        if cleaned_number is None and find_phone is not None:
+            is_find = True
+        else:
+            is_find = False
 
         print("db 저장 전화번호 출력", phone_num)
+        print("is_find", is_find)
 
         # 데이터베이스 연결
         conn = connectDB()
@@ -289,10 +292,10 @@ if __name__ == "__main__":
                      "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=424&search.boardtype=L"]
     bucket_name = "c2c-trade-image"
 
-    Cellphone = Cellphone(cellphone_url, bucket_name)
+    cellphone = Cellphone(cellphone_url, bucket_name)
     url_cache = URLCache(200)
 
-    #Cellphone.dynamic_crawl(driver, 'https://cafe.naver.com/ArticleRead.nhn?clubid=10050146&page=1&menuid=1156&boardtype=L&articleid=1056735750&referrerAllArticles=false')
+    #cellphone.dynamic_crawl(driver, 'https://cafe.naver.com/ArticleRead.nhn?clubid=10050146&page=1&menuid=1156&boardtype=L&articleid=1056735750&referrerAllArticles=false')
 
     try:
         while True:
@@ -301,14 +304,14 @@ if __name__ == "__main__":
 
             # 주어진 URL 목록을 순회하면서 캐시에 없는 URL만 처리
             for url in utils.listUp(cellphone_url):
-                full_url = Cellphone.jungo_url + url
+                full_url = cellphone.jungo_url + url
                 if not url_cache.is_cached(url):
                     new_posts.append(full_url)  # 캐시에 없는 URL에 접두어를 붙여 new_posts에 추가
                     url_cache.add_to_cache(url)  # 캐시에 URL을 추가
 
             for post_url in new_posts:
                 print(f"Crawling {post_url}")
-                Cellphone.dynamic_crawl(post_url)
+                cellphone.dynamic_crawl(post_url)
             time.sleep(randint(30, 60)) # 1분마다 새 게시물 확인
     finally:
-        Cellphone.driver.quit() # Webdriver 종료 
+        cellphone.driver.quit() # Webdriver 종료 

@@ -78,16 +78,7 @@ class Ticket(JungoNara):
 
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # 없는 전화번호, 안심번호 필터링
-        try:
-            tell_tag = soup.find('p', class_='tell')
-            if tell_tag.text == ' ***-****-**** ':
-                print("안심번호 사용중")
-                pass
-        except:
-            print("전화번호 추출 불가")
-            pass
-        
+
         se_module = soup.find_all('div', class_="se-section se-section-text se-l-default")
 
         # # 상품 소개
@@ -101,32 +92,49 @@ class Ticket(JungoNara):
         # span 텍스트들을 줄바꿈 문자로 연결
         description_text = "\n".join(span_texts)
 
-        # 상품설명에서 찾으면 True, 아니면 False
-        is_find = False
 
-        # 핸드폰 번호를 설명란에서 찾으면 가져오고, 없으면 더이상 코드 수행을 시키지 않음
-        try:
-            found_phone_number = find_phone_number(description_text)
-            if found_phone_number is None:
-                print("상품 설명에서도 존재 X")
-                return
-            else:
-                is_find = True
-        except Exception as e:
-            print("Find ticket Error", e)
-            return 
+        is_tell = False
 
-        # 프로필에 존재하는 핸드폰 번호
+        # 없는 전화번호, 안심번호 필터링
         try:
-            cleaned_number = tell_tag.text.replace(' ', '').replace('-', '')
+            tell_tag = soup.find('p', class_='tell')
+            #print(tell_tag.text)
+            if tell_tag.text == ' ***-****-**** ':
+                print("안심번호 사용중")
+                # 상품 설명에서 전화번호 찾기 
+                find_phone = find_phone_number(description_text)
+                if find_phone is None:
+                    print("상품 설명도 존재 x")
+                    return
+            print("프로필에서 번호 추출 완료")
+            is_tell = True
+            find_phone = find_phone_number(description_text)
+            if find_phone is None:
+                print("프로필에서는 존재하지만 상품 설명에서는 번호 존재 X")
         except:
-            cleaned_number = None
-
+            print("전화번호 추출 불가")
+            find_phone = find_phone_number(description_text)
+            if find_phone is None:
+                print("상품 설명도 존재 x")
+                return
+            
+        # API 요청 header 설정
         headers = {
             'X-TheCheat-ApiKey': self.api_key
         }
 
-        # 더치트 API 요청 보내기 (프로필 전화번호)
+        # 초기화
+        fraud_check = 'N'
+        found_fraud_check = 'N'
+
+        # 전처리 전화번호 초기화
+        cleaned_number = None
+
+        # 전화번호 전처리
+        if is_tell == True:
+            cleaned_number = tell_tag.text.replace(' ', '').replace('-', '')
+
+            # 더치트 API 요청 보내기 (프로필 전화번호)
         if cleaned_number is not None:
             # the Cheat API 요청 데이터
             request_data = {
@@ -143,18 +151,16 @@ class Ticket(JungoNara):
                 if response_temp is not None:
                     fraud_check = json.loads(response_temp)['caution']
                     print("프로필", fraud_check)
-                else:
-                    fraud_check = None
-                    print("프로필", fraud_check)
             except Exception as e:
                 print("API request Error:", {e})
-        else:
-            fraud_check = None
+                return
         
-        if found_phone_number is not None:
+
+        # 상품 설명 전화번호 API 요청
+        if find_phone is not None:
             found_request_data = {
                     "keyword_type": "phone",
-                    "keyword": found_phone_number,
+                    "keyword": find_phone,
                     "add_info": ""
                  }
 
@@ -168,27 +174,17 @@ class Ticket(JungoNara):
                 if found_response_temp is not None:
                     found_fraud_check = json.loads(found_response_temp)['caution']
                     print("상품설명", found_fraud_check)
-                else:
-                    found_fraud_check = None
-                    print("상품설명", found_fraud_check)
             except Exception as e:
                 print("API request Error:", {e})
-        else:
-            found_fraud_check = None
-
-        is_fraud = fraud_check or found_fraud_check
+                return
         
-        # 사기 체크
-        if fraud_check is not None and found_fraud_check is not None:
-            if found_fraud_check == 'Y':
-                is_fraud = 'Y'
-
-        print("사기 체크", is_fraud)
-        
-        if is_fraud == 'N':
-            is_fraud = False
-        else:
+       
+        # 사기 여부 탐지
+        if fraud_check == 'Y' or fraud_check == 'Y':
             is_fraud = True
+        else:
+            is_fraud = False
+        
 
         # 상품 정보 찾기
         product_detail = soup.find('div', class_="product_detail")
@@ -231,12 +227,19 @@ class Ticket(JungoNara):
         region = results['거래 지역']
         
         # 둘 다 존재하면, 띄어쓰기해서 저장
-        if cleaned_number is not None and found_phone_number is not None:
-            phone_num = cleaned_number + ' ' + found_phone_number
+        if cleaned_number is not None and find_phone is not None:
+            phone_num = cleaned_number + ' ' + find_phone
         else:
-            phone_num = cleaned_number or found_phone_number
+            phone_num = cleaned_number or find_phone
+
+        # 상품에서만 존재하는지 아닌지 확인
+        if cleaned_number is None and find_phone is not None:
+            is_find = True
+        else:
+            is_find = False
 
         print("db 저장 전화번호 출력", phone_num)
+        print("is_find", is_find)
 
         # 데이터베이스 연결
         conn = connectDB()
