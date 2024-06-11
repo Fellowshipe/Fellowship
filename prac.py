@@ -35,10 +35,10 @@ def find_phone_number(text):
     return None
 
 # 데이터베이스에서 데이터를 가져오는 쿼리
-query = "SELECT id, description FROM tickets ORDER BY id ASC LIMIT 50"
-df = pd.read_sql_query(query, connectDB())
+# query = "SELECT id, description FROM tickets ORDER BY id ASC LIMIT 50"
+# df = pd.read_sql_query(query, connectDB())
 
-# 전화번호 컬럼 추가
-df['phone_number'] = df['description'].apply(find_phone_number)
+# # 전화번호 컬럼 추가
+# df['phone_number'] = df['description'].apply(find_phone_number)
 
-print(df)
+# print(df)
