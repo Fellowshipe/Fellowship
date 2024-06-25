@@ -43,7 +43,7 @@ class Cellphone(JungoNara):
         self.driver = webdriver.Chrome(options=options)
 
     def _dynamic_crawl(self, url: str) -> str:        
-        assert url.startswith(self.jungo_url), "Given url does not seem to be from cellphoe category."
+        assert url.startswith(self.jungo_url), "Given url does not seem to be from cellphone category."
 
         self.driver.get(url)
        
