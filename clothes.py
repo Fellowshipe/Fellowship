@@ -308,7 +308,7 @@ if __name__ == "__main__":
 
             # 주어진 URL 목록을 순회하면서 캐시에 없는 URL만 처리
             for url in utils.listUp(clothes_url):
-                full_url = clothes_url.jungo_url + url
+                full_url = clothes.jungo_url + url
                 if not url_cache.is_cached(url):
                     new_posts.append(full_url)  # 캐시에 없는 URL에 접두어를 붙여 new_posts에 추가
                     url_cache.add_to_cache(url)  # 캐시에 URL을 추가
