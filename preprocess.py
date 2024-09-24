@@ -21,22 +21,20 @@
 import pandas as pd
 import string
 import boto3
-from konlpy.tag import Okt
 import os
 from dbControl.connect_db import connectDB
-
-# Initialize the tokenizer
-okt = Okt()
 
 # 정형 데이터 전처리
 def process_tabular_data(df):
     # 데이터프레임 복사
     df_processed = df.copy()
     
+    # 1. price
     # 문자열에서 "원"과 콤마(,)를 제거하고 정수형으로 변환
     df_processed['price'] = df_processed['price'].str.replace('원', '')  # "원" 제거
     df_processed['price'] = df_processed['price'].str.replace(',', '')   # 콤마 제거
     
+    # 2. zero_price_ratio
     # 각 가격에서 0의 비율을 계산하는 함수
     def calculate_zero_ratio(price):
         price_str = str(price)
@@ -50,6 +48,7 @@ def process_tabular_data(df):
     # int 변환
     df_processed['price'] = df_processed['price'].astype(int)
     
+    # 11. transaction_region
     # transaction_region -> None은 0, 데이터 있으면 1
     df_processed['transaction_region'] = df_processed['transaction_region'].apply(lambda x: 0 if pd.isnull(x) else 1)
     
@@ -57,7 +56,8 @@ def process_tabular_data(df):
     df_processed['post_date'] = pd.to_datetime(df_processed['post_date'])
     df_processed['post_day_of_week'] = df_processed['post_date'].dt.dayofweek  # 요일 (0=Monday, 1=Tuesday, ..., 6=Sunday)
     df_processed['post_hour'] = df_processed['post_date'].dt.hour  # 시간대 (0 ~ 23)
-
+    
+    # 6. member_level, 7. post_day_of_week, post_hour, 8. product_status, 9. payment_method, 10. shipping_method
     # 원핫 인코딩을 할 컬럼 리스트
     columns_to_encode = ['member_level', 'product_status', 'payment_method', 'post_day_of_week', 'post_hour']
 
@@ -78,6 +78,7 @@ def process_tabular_data(df):
     # 원핫 인코딩 수행
     df_processed = pd.get_dummies(df_processed, columns=columns_to_encode)
     
+    # 3. description_length
     # description -> 글자수 변수 생성
     df_processed['description_length'] = df_processed['description'].apply(len)
 
@@ -92,10 +93,12 @@ def process_tabular_data(df):
         digit_ratio = digits / total_chars
         return special_ratio, digit_ratio
     
+    # 4. description_special_ratio, description_digit_ratio
     df_processed['description_special_ratio'], df_processed['description_digit_ratio'] = zip(*df_processed['description'].apply(calculate_ratios))
 
     return df_processed
 
+# 5. image_count
 # 이미지 개수 계산
 def count_images_per_post(df, bucket_name):
     # Initialize S3 client
@@ -121,46 +124,20 @@ def count_images_per_post(df, bucket_name):
     df['image_count'] = df.apply(lambda row: list_images_in_s3(row['id'], get_folder(row['table'])), axis=1)
     return df
 
-# 텍스트 전처리 함수
-def preprocess_text(df):
-    # 제목과 본문을 결합
-    df['combined_text'] = df['title'] + ' ' + df['description']
-
-    # 형태소 분석 및 토큰화
-    def tokenize(text):
-        return okt.morphs(text, stem=True)
-
-    df['tokenized_text'] = df['combined_text'].apply(tokenize)
-    
-    return df
-
 if __name__ == "__main__":
     # Query to fetch data from both tables
-    query_cellphone = "SELECT *, 'cellphone' as table FROM cellphone ORDER BY id LIMIT 10"
-    query_tickets = "SELECT *, 'tickets' as table FROM tickets ORDER BY id LIMIT 10"
+    query_cellphone = "SELECT *, 'cellphone' as table FROM cellphone ORDER BY id"
     
     # Fetch data from cellphone table
     df_cellphone = pd.read_sql_query(query_cellphone, connectDB())
     
-    # Fetch data from tickets table
-    df_tickets = pd.read_sql_query(query_tickets, connectDB())
-    
-    # Combine data from both tables
-    df_combined = pd.concat([df_cellphone, df_tickets], ignore_index=True)
-    
     # Process the combined data
-    df_processed = process_tabular_data(df_combined)
+    df_processed = process_tabular_data(df_cellphone)
     
     # Set your S3 bucket name
     bucket_name = 'c2c-trade-image'
     
     # Count images per post
     df_processed = count_images_per_post(df_processed, bucket_name)
-
-    # Preprocess text data
-    df_processed = preprocess_text(df_processed)
-        
-    # Display the processed data
-    print(df_processed[['id', 'image_count', 'tokenized_text']])
     
-    print(df_processed.columns)
+    df_processed.to_csv("tabular_data.csv", index=False)

@@ -4,10 +4,12 @@ import boto3
 from konlpy.tag import Okt
 import os
 import torch
-import clip  # OpenAI의 CLIP 라이브러리 가져오기
 from PIL import Image
 from tqdm import tqdm
+import json
+import requests
 from dbControl.connect_db import connectDB
+from transformers import CLIPProcessor, CLIPModel
 
 # 텍스트 전처리 함수
 def preprocess_text(df):
@@ -25,7 +27,7 @@ def count_images_per_post(df, bucket_name):
         prefix = f"{folder}/{post_id}_"
         response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
         if 'Contents' in response:
-            image_urls = [item['Key'] for item in response['Contents']]
+            image_urls = [f"https://{bucket_name}.s3.amazonaws.com/{item['Key']}" for item in response['Contents']]
             return len(response['Contents']), image_urls
         return 0, []
 
@@ -43,85 +45,92 @@ def count_images_per_post(df, bucket_name):
     df['image_count'], df['image_urls'] = zip(*df.apply(lambda row: list_images_in_s3(row['id'], get_folder(row['table'])), axis=1))
     return df
 
-# Function to fetch image from S3
-def fetch_image_from_s3(bucket_name, image_key):
-    s3 = boto3.client('s3')
+# Function to fetch image from URL
+def fetch_image_from_url(image_url):
     try:
-        response = s3.get_object(Bucket=bucket_name, Key=image_key)
-        image = Image.open(response['Body']).convert("RGB")
+        image = Image.open(requests.get(image_url, stream=True).raw).convert("RGB")
         return image
-    except s3.exceptions.NoSuchKey:
-        print(f"No such key: {image_key}")
+    except Exception as e:
+        print(f"Error fetching image from {image_url}: {e}")
         return None
 
-# Function to process images and texts
-def process_images_and_texts(df, bucket_name, device):
-    texts = df['combined_text'].tolist()
-    image_keys = df['image_urls'].tolist()
+# Save texts and images URLs as JSON
+def save_texts_images_as_json(df, json_file='text_image_pairs.json'):
+    data = [{'text': row['combined_text'], 'image_urls': row['image_urls']} for _, row in df.iterrows()]
+    with open(json_file, 'w') as f:
+        json.dump(data, f)
 
-    texts_expanded = []
-    images = []
-
-    for text, keys in zip(texts, image_keys):
-        for image_key in keys:
-            print(f"Trying to fetch image with key: {image_key}")  # Debugging line
-            image = fetch_image_from_s3(bucket_name, image_key)
-            if image:
-                image = preprocess(image).unsqueeze(0).to(device)
-                images.append(image)
-                texts_expanded.append(text)
-            else:
-                images.append(torch.zeros((1, 3, 224, 224)).to(device))
-                texts_expanded.append(text)
-
-    return texts_expanded, images
+# Load texts and images URLs from JSON
+def load_texts_images_from_json(json_file='text_image_pairs.json'):
+    with open(json_file, 'r') as f:
+        data = json.load(f)
+    texts = [item['text'] for item in data]
+    image_urls = [item['image_urls'] for item in data]
+    return texts, image_urls
 
 # Main function to load data, preprocess and evaluate with CLIP
 if __name__ == "__main__":
-    # Query to fetch data from all tables
-    query_cellphone_fraud = "SELECT *, 'cellphone' as table FROM cellphone WHERE is_fraud = True ORDER BY id LIMIT 10"
-    query_tickets_fraud = "SELECT *, 'tickets' as table FROM tickets WHERE is_fraud = True ORDER BY id LIMIT 10"
-    query_clothes_fraud = "SELECT *, 'clothes' as table FROM clothes WHERE is_fraud = True ORDER BY id LIMIT 10"
-    query_cellphone_nonfraud = "SELECT *, 'cellphone' as table FROM cellphone WHERE is_fraud = False ORDER BY id LIMIT 100"
-    query_tickets_nonfraud = "SELECT *, 'tickets' as table FROM tickets WHERE is_fraud = False ORDER BY id LIMIT 100"
-    query_clothes_nonfraud = "SELECT *, 'clothes' as table FROM clothes WHERE is_fraud = False ORDER BY id LIMIT 100"   
-     
-    # Fetch data from table
-    df_cellphone_fraud = pd.read_sql_query(query_cellphone_fraud, connectDB())
-    df_tickets_fraud = pd.read_sql_query(query_tickets_fraud, connectDB())
-    df_clothes_fraud = pd.read_sql_query(query_clothes_fraud, connectDB())
-    df_cellphone_nonfraud = pd.read_sql_query(query_cellphone_nonfraud, connectDB())
-    df_tickets_nonfraud = pd.read_sql_query(query_tickets_nonfraud, connectDB())
-    df_clothes_nonfraud = pd.read_sql_query(query_clothes_nonfraud, connectDB())
-    
-    # Combine data from all tables
-    df_combined = pd.concat([df_cellphone_fraud, df_tickets_fraud, df_clothes_fraud, df_cellphone_nonfraud, df_tickets_nonfraud, df_clothes_nonfraud], ignore_index=True)
-    
     # Set your S3 bucket name
     bucket_name = 'c2c-trade-image'
+    processed_data_file = 'processed_data.csv'
     
-    # Preprocess text data
-    df_processed = preprocess_text(df_combined)
-    
-    # Count images per post and get URLs
-    df_processed = count_images_per_post(df_processed, bucket_name)
-    
-    # Load the CLIP model and preprocessing method
-    model, preprocess = clip.load("ViT-B/32")
+    if not os.path.exists(processed_data_file):
+        # Query to fetch data from all tables
+        query_cellphone_fraud = "SELECT *, 'cellphone' as table FROM cellphone WHERE is_fraud = True ORDER BY id LIMIT 25"
+        query_tickets_fraud = "SELECT *, 'tickets' as table FROM tickets WHERE is_fraud = True ORDER BY id LIMIT 25"
+        query_cellphone_nonfraud = "SELECT *, 'cellphone' as table FROM cellphone WHERE is_fraud = False ORDER BY id LIMIT 25"
+        query_tickets_nonfraud = "SELECT *, 'tickets' as table FROM tickets WHERE is_fraud = False ORDER BY id LIMIT 25"
+
+        # Fetch data from table
+        df_cellphone_fraud = pd.read_sql_query(query_cellphone_fraud, connectDB())
+        df_tickets_fraud = pd.read_sql_query(query_tickets_fraud, connectDB())
+        df_cellphone_nonfraud = pd.read_sql_query(query_cellphone_nonfraud, connectDB())
+        df_tickets_nonfraud = pd.read_sql_query(query_tickets_nonfraud, connectDB())
+
+        # Combine data from all tables
+        df_combined = pd.concat([df_cellphone_fraud, df_tickets_fraud, df_cellphone_nonfraud, df_tickets_nonfraud], ignore_index=True)
+        
+        # Preprocess text data
+        df_processed = preprocess_text(df_combined)
+        
+        # Count images per post and get URLs
+        df_processed = count_images_per_post(df_processed, bucket_name)
+        
+        # Save processed data to CSV
+        df_processed.to_csv(processed_data_file, index=False)
+    else:
+        # Load processed data from CSV
+        df_processed = pd.read_csv(processed_data_file)
+       
+    # Load the CLIP model and processor
+    model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+    processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
-    
-    # Process images and texts
-    texts, images = process_images_and_texts(df_processed, bucket_name, device)
 
-    # Tokenize texts
-    text_tokens = clip.tokenize(texts, truncate=True).to(device)
+        
+    # Fetch images from URLs
+    images = []
+    texts_expanded = []
+    for text, urls in tqdm(zip(df_processed['combined_text'], df_processed['image_urls'])):
+        urls = eval(urls)  # Convert string representation of list back to list
+        for url in urls:
+            image = fetch_image_from_url(url)
+            if image:
+                images.append(image)
+                texts_expanded.append(text)
+            else:
+                images.append(Image.new("RGB", (224, 224)))  # 빈 이미지를 대신 사용
+
+
+    # Process texts and images
+    inputs = processor(text=texts_expanded, images=images, return_tensors="pt", padding=True, truncation=True).to(device)
 
     # Compute features
     with torch.no_grad():
-        text_features = model.encode_text(text_tokens)
-        image_features = torch.cat(images)
-        image_features = model.encode_image(image_features)
+        outputs = model(**inputs)
+        text_features = outputs.text_embeds
+        image_features = outputs.image_embeds
 
     # Normalize features
     text_features /= text_features.norm(dim=-1, keepdim=True)
