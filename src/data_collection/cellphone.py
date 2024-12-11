@@ -13,17 +13,17 @@ import time
 from selenium import webdriver
 
 from JungoNara import JungoNara
-from dbControl.connect_db import connectDB
-from dbControl.close_connection import close_connection
-from dbControl.insert_product import insert_product
+from src.dbControl.connect_db import connectDB
+from src.dbControl.close_connection import close_connection
+from src.dbControl.insert_product import insert_product
 
 from utils.URLCache import URLCache
 import utils.utils as utils
 import utils.imageToS3 as imageToS3
 import utils.thecheatapi as thecheatapi
-from prac import find_phone_number
+from src.data_processing.prac import find_phone_number
 
-class Ticket(JungoNara):
+class Cellphone(JungoNara):
     def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
         super().__init__(delay_time, saving_html)
         self.base_url = base_url
@@ -43,7 +43,7 @@ class Ticket(JungoNara):
         self.driver = webdriver.Chrome(options=options)
 
     def _dynamic_crawl(self, url: str) -> str:        
-        assert url.startswith(self.jungo_url), "Given url does not seem to be from ticket category."
+        assert url.startswith(self.jungo_url), "Given url does not seem to be from cellphone category."
 
         self.driver.get(url)
        
@@ -63,7 +63,7 @@ class Ticket(JungoNara):
         try:
             iframe = wait.until(EC.presence_of_element_located((By.ID, "cafe_main")))
         except:
-            # print("삭제된 게시물")
+            #print("삭제된 게시물")
             return
         
         # 브라우저 변환
@@ -100,7 +100,7 @@ class Ticket(JungoNara):
             tell_tag = soup.find('p', class_='tell')
             #print(tell_tag.text)
             if tell_tag.text == ' ***-****-**** ':
-                # print("안심번호 사용중")
+                #print("안심번호 사용중")
                 # 상품 설명에서 전화번호 찾기 
                 find_phone = find_phone_number(description_text)
                 if find_phone is None:
@@ -173,7 +173,7 @@ class Ticket(JungoNara):
                 # 사기 피해 여부
                 if found_response_temp is not None:
                     found_fraud_check = json.loads(found_response_temp)['caution']
-                    # print("상품설명", found_fraud_check)
+                    #print("상품설명", found_fraud_check)
             except Exception as e:
                 print("API request Error:", {e})
                 return
@@ -238,8 +238,8 @@ class Ticket(JungoNara):
         else:
             is_find = False
 
-        # print("db 저장 전화번호 출력", phone_num)
-        # print("is_find", is_find)
+        #print("db 저장 전화번호 출력", phone_num)
+        #print("is_find", is_find)
 
         # 데이터베이스 연결
         conn = connectDB()
@@ -248,7 +248,7 @@ class Ticket(JungoNara):
         # fraud check -> 최근 3개월
         # MFCC, RNN/LSTM를 활용한 연구 방법을 사용
         product_id = insert_product(conn, 
-                                    "tickets", 
+                                    "cellphone", 
                                     product_name, 
                                     product_price, 
                                     membership,
@@ -273,7 +273,7 @@ class Ticket(JungoNara):
             try:
                 url = img['src']
                 image_bytes = imageToS3.download_image(url)
-                file_name = f'tickets/{product_id}_{temp_num}.jpg'
+                file_name = f'cellphone/{product_id}_{temp_num}.jpg'
                 temp_num += 1
                 imageToS3.upload_to_s3(self.bucket_name, image_bytes, file_name)
             except requests.RequestException as e:
@@ -286,18 +286,16 @@ class Ticket(JungoNara):
 
 if __name__ == "__main__":
     #driver = utils.get_driver() # WebDriver 초기화
-    tickets_url = ["https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1156&search.boardtype=L",
-                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1285&search.boardtype=L",
-                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1866&search.boardtype=L",
-                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=448&search.boardtype=L",
-                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1537&search.boardtype=L",
-                   "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1286&search.boardtype=L"]
+    cellphone_url = ["https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=339&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=427&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=749&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=424&search.boardtype=L"]
     bucket_name = "c2c-trade-image"
 
-    tickets = Ticket(tickets_url, bucket_name)
+    cellphone = Cellphone(cellphone_url, bucket_name)
     url_cache = URLCache(200)
 
-    #tickets.dynamic_crawl(driver, 'https://cafe.naver.com/ArticleRead.nhn?clubid=10050146&page=1&menuid=1156&boardtype=L&articleid=1056735750&referrerAllArticles=false')
+    #cellphone.dynamic_crawl(driver, 'https://cafe.naver.com/ArticleRead.nhn?clubid=10050146&page=1&menuid=1156&boardtype=L&articleid=1056735750&referrerAllArticles=false')
 
     try:
         while True:
@@ -305,15 +303,15 @@ if __name__ == "__main__":
             new_posts = []
 
             # 주어진 URL 목록을 순회하면서 캐시에 없는 URL만 처리
-            for url in utils.listUp(tickets_url):
-                full_url = tickets.jungo_url + url
+            for url in utils.listUp(cellphone_url):
+                full_url = cellphone.jungo_url + url
                 if not url_cache.is_cached(url):
                     new_posts.append(full_url)  # 캐시에 없는 URL에 접두어를 붙여 new_posts에 추가
                     url_cache.add_to_cache(url)  # 캐시에 URL을 추가
 
             for post_url in new_posts:
-                # print(f"Crawling {post_url}")
-                tickets.dynamic_crawl(post_url)
+                #print(f"Crawling {post_url}")
+                cellphone.dynamic_crawl(post_url)
             time.sleep(randint(30, 60)) # 1분마다 새 게시물 확인
     finally:
-        tickets.driver.quit() # Webdriver 종료 
+        cellphone.driver.quit() # Webdriver 종료 

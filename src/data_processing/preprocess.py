@@ -21,8 +21,7 @@
 import pandas as pd
 import string
 import boto3
-import os
-from dbControl.connect_db import connectDB
+from src.dbControl.connect_db import connectDB
 
 # 정형 데이터 전처리
 def process_tabular_data(df):

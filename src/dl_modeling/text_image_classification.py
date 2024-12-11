@@ -11,8 +11,8 @@ import pandas as pd
 import optuna
 
 # Load the uploaded CSV files to inspect their structure and contents
-text_image_data = pd.read_csv('data/text_image.csv')
-class_data = pd.read_csv('data/class_data.csv')
+text_image_data = pd.read_csv('../../data/text_image.csv')
+class_data = pd.read_csv('../../data/class_data.csv')
 
 # Merge the two datasets on the 'id' column to create a unified dataset for training
 merged_data = pd.merge(text_image_data, class_data, on="id")

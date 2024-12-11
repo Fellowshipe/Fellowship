@@ -13,17 +13,17 @@ import time
 from selenium import webdriver
 
 from JungoNara import JungoNara
-from dbControl.connect_db import connectDB
-from dbControl.close_connection import close_connection
-from dbControl.insert_product import insert_product
+from src.dbControl.connect_db import connectDB
+from src.dbControl.close_connection import close_connection
+from src.dbControl.insert_product import insert_product
 
 from utils.URLCache import URLCache
 import utils.utils as utils
 import utils.imageToS3 as imageToS3
 import utils.thecheatapi as thecheatapi
-from prac import find_phone_number
+from src.data_processing.prac import find_phone_number
 
-class Cellphone(JungoNara):
+class Clothes(JungoNara):
     def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
         super().__init__(delay_time, saving_html)
         self.base_url = base_url
@@ -43,7 +43,7 @@ class Cellphone(JungoNara):
         self.driver = webdriver.Chrome(options=options)
 
     def _dynamic_crawl(self, url: str) -> str:        
-        assert url.startswith(self.jungo_url), "Given url does not seem to be from cellphone category."
+        assert url.startswith(self.jungo_url), "Given url does not seem to be from clothes category."
 
         self.driver.get(url)
        
@@ -248,7 +248,7 @@ class Cellphone(JungoNara):
         # fraud check -> 최근 3개월
         # MFCC, RNN/LSTM를 활용한 연구 방법을 사용
         product_id = insert_product(conn, 
-                                    "cellphone", 
+                                    "clothes", 
                                     product_name, 
                                     product_price, 
                                     membership,
@@ -273,7 +273,7 @@ class Cellphone(JungoNara):
             try:
                 url = img['src']
                 image_bytes = imageToS3.download_image(url)
-                file_name = f'cellphone/{product_id}_{temp_num}.jpg'
+                file_name = f'clothes/{product_id}_{temp_num}.jpg'
                 temp_num += 1
                 imageToS3.upload_to_s3(self.bucket_name, image_bytes, file_name)
             except requests.RequestException as e:
@@ -286,13 +286,17 @@ class Cellphone(JungoNara):
 
 if __name__ == "__main__":
     #driver = utils.get_driver() # WebDriver 초기화
-    cellphone_url = ["https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=339&search.boardtype=L",
-                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=427&search.boardtype=L",
-                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=749&search.boardtype=L",
-                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=424&search.boardtype=L"]
+    clothes_url = ["https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=356&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=358&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1007&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1008&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=782&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1011&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1010&search.boardtype=L",
+                     "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=1009&search.boardtype=L"]
     bucket_name = "c2c-trade-image"
 
-    cellphone = Cellphone(cellphone_url, bucket_name)
+    clothes = Clothes(clothes_url, bucket_name)
     url_cache = URLCache(200)
 
     #cellphone.dynamic_crawl(driver, 'https://cafe.naver.com/ArticleRead.nhn?clubid=10050146&page=1&menuid=1156&boardtype=L&articleid=1056735750&referrerAllArticles=false')
@@ -303,15 +307,15 @@ if __name__ == "__main__":
             new_posts = []
 
             # 주어진 URL 목록을 순회하면서 캐시에 없는 URL만 처리
-            for url in utils.listUp(cellphone_url):
-                full_url = cellphone.jungo_url + url
+            for url in utils.listUp(clothes_url):
+                full_url = clothes.jungo_url + url
                 if not url_cache.is_cached(url):
                     new_posts.append(full_url)  # 캐시에 없는 URL에 접두어를 붙여 new_posts에 추가
                     url_cache.add_to_cache(url)  # 캐시에 URL을 추가
 
             for post_url in new_posts:
                 #print(f"Crawling {post_url}")
-                cellphone.dynamic_crawl(post_url)
+                clothes.dynamic_crawl(post_url)
             time.sleep(randint(30, 60)) # 1분마다 새 게시물 확인
     finally:
-        cellphone.driver.quit() # Webdriver 종료 
+        clothes.driver.quit() # Webdriver 종료 

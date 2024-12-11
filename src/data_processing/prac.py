@@ -1,6 +1,4 @@
-import pandas as pd
 import re
-from dbControl.connect_db import connectDB
 
 # 전화번호 패턴을 정규 표현식으로 정의 (공백 포함)
 phone_pattern = re.compile(

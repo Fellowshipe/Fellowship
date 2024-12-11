@@ -1,11 +1,10 @@
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 
 from bs4 import BeautifulSoup
 import requests
 import time
 
-from prac import find_phone_number
+from src.data_processing.prac import find_phone_number
 
 def get_driver():
     """WebDriver 인스턴스를 생성하고 반환함."""
