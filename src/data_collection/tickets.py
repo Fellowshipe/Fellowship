@@ -21,7 +21,7 @@ from utils.URLCache import URLCache
 import utils.utils as utils
 import utils.imageToS3 as imageToS3
 import utils.thecheatapi as thecheatapi
-from src.data_processing.prac import find_phone_number
+from src.data_processing.find_phone_num import find_phone_number
 
 class Ticket(JungoNara):
     def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
