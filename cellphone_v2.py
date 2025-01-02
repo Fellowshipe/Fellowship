@@ -13,15 +13,15 @@ import time
 from selenium import webdriver
 
 from JungoNara import JungoNara
-from dbControl.connect_db import connectDB
-from dbControl.close_connection import close_connection
-from dbControl.insert_product import insert_product
+from src.dbControl.connect_db import connectDB
+from src.dbControl.close_connection import close_connection
+from src.dbControl.insert_product import insert_product
 
 from utils.URLCache import URLCache
 import utils.utils as utils
 import utils.imageToS3 as imageToS3
 import utils.thecheatapi as thecheatapi
-from prac import find_phone_number
+from src.data_processing.find_phone_num import find_phone_number
 
 class Cellphone(JungoNara):
     def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
