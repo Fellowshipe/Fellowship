@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 import requests
 import time
 from selenium import webdriver
+import tempfile
 
 from JungoNara import JungoNara
 from src.dbControl.connect_db import connectDB
@@ -41,6 +42,8 @@ class Cellphone(JungoNara):
         options = webdriver.ChromeOptions()
         options.add_argument("--no-sandbox")
         options.add_argument('--headless')
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument(f"--user-data-dir={tempfile.mkdtemp()}")
         self.driver = webdriver.Chrome(options=options)
 
     def _dynamic_crawl(self, url: str) -> str:        
