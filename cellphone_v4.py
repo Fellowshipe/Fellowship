@@ -17,6 +17,7 @@ import tempfile
 
 from JungoNara import JungoNara
 from src.dbControl.connect_db import connectDB
+from src.dbControl.create_product_table import create_product_table
 from src.dbControl.close_connection import close_connection
 from src.dbControl.insert_product import insert_product
 from selenium.webdriver.chrome.service import Service
@@ -313,6 +314,11 @@ if __name__ == "__main__":
     bucket_name = "c2c-trade-image"
     url_cache = URLCache(200)
 
+    # ✅ DB 연결 및 테이블 생성 (최초 1회)
+    conn = connectDB()
+    create_product_table(conn)
+    conn.close()
+    
     crawl_count = 0  # 게시물 크롤링 카운트 초기화
 
     try:

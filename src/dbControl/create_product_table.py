@@ -12,8 +12,11 @@ def create_product_table(conn):
         shipping_method VARCHAR(100),
         transaction_region VARCHAR(100),
         description TEXT
+        phone_num VARCHAR(30),
+        is_fraud BOOLEAN DEFAULT FALSE,
+        is_find BOOLEAN DEFAULT FALSE
     );
     '''
-    cur.excute(create_product_table_query)
+    cur.execute(create_product_table_query)
     conn.commit()
     cur.close()
