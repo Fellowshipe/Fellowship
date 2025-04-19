@@ -38,6 +38,9 @@ class Cellphone(JungoNara):
         self.api_url = os.getenv('THE_CHEAT_URL')
         self.api_key = os.getenv('X-TheCheat-ApiKey')
         self.enc_key = os.getenv('ENC_KEY')
+        
+        temp_user_data_dir = tempfile.mkdtemp(prefix="chrome_user_data_")
+        print(f"[DEBUG] Using user-data-dir: {temp_user_data_dir}")
 
         options = webdriver.ChromeOptions()
         options.add_argument("--no-sandbox")
