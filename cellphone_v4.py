@@ -19,6 +19,7 @@ from JungoNara import JungoNara
 from src.dbControl.connect_db import connectDB
 from src.dbControl.close_connection import close_connection
 from src.dbControl.insert_product import insert_product
+from selenium.webdriver.chrome.service import Service
 
 from utils.URLCache import URLCache
 import utils.utils as utils
@@ -39,14 +40,15 @@ class Cellphone(JungoNara):
         self.api_key = os.getenv('X-TheCheat-ApiKey')
         self.enc_key = os.getenv('ENC_KEY')
         
-        temp_user_data_dir = tempfile.mkdtemp(prefix="chrome_user_data_")
-        print(f"[DEBUG] Using user-data-dir: {temp_user_data_dir}")
-
+        user_data_dir = tempfile.mkdtemp()
+        print("[DEBUG] Using user-data-dir:", user_data_dir)
         options = webdriver.ChromeOptions()
         options.add_argument("--no-sandbox")
         options.add_argument('--headless')
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument(f"--user-data-dir={tempfile.mkdtemp()}")
+        service = Service(executable_path="/usr/local/bin/chromedriver")  # 명시적으로 지정
+
         self.driver = webdriver.Chrome(options=options)
 
     def _dynamic_crawl(self, url: str) -> str:        
