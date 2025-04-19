@@ -15,15 +15,15 @@ import time
 from selenium import webdriver
 
 from JungoNara import JungoNara
-from dbControl.connect_db import connectDB
-from dbControl.close_connection import close_connection
-from dbControl.insert_product import insert_product
+from src.dbControl.connect_db import connectDB
+from src.dbControl.close_connection import close_connection
+from src.dbControl.insert_product import insert_product
 
 from utils.URLCache import URLCache
 import utils.utils as utils
 import utils.imageToS3 as imageToS3
 import utils.thecheatapi as thecheatapi
-from prac import find_phone_number
+from src.data_processing import find_phone_num
 
 class Cellphone(JungoNara):
     def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
@@ -103,18 +103,18 @@ class Cellphone(JungoNara):
             if tell_tag.text == ' ***-****-**** ':
                 #print("안심번호 사용중")
                 # 상품 설명에서 전화번호 찾기 
-                find_phone = find_phone_number(description_text)
+                find_phone = find_phone_num(description_text)
                 if find_phone is None:
                     print("상품 설명도 존재 x")
                     return
             print("프로필에서 번호 추출 완료")
             is_tell = True
-            find_phone = find_phone_number(description_text)
+            find_phone = find_phone_num(description_text)
             if find_phone is None:
                 print("프로필에서는 존재하지만 상품 설명에서는 번호 존재 X")
         except:
             print("전화번호 추출 불가")
-            find_phone = find_phone_number(description_text)
+            find_phone = find_phone_num(description_text)
             if find_phone is None:
                 print("상품 설명도 존재 x")
                 return
