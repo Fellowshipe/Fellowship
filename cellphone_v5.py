@@ -61,6 +61,7 @@ class Cellphone(JungoNara):
         self.driver = webdriver.Chrome(service=service, options=options)
 
     def _dynamic_crawl(self, url: str) -> str:
+        print(f"[INFO] 수집 시도 중: {url}")
         if not url.startswith(self.jungo_url):
             return
 
@@ -75,6 +76,7 @@ class Cellphone(JungoNara):
             iframe = wait.until(EC.presence_of_element_located((By.ID, "cafe_main")))
             self.driver.switch_to.frame(iframe)
         except:
+            print("[WARNING] iframe 로딩 실패")
             return
 
         soup = BeautifulSoup(self.driver.page_source, 'html.parser')
@@ -91,12 +93,14 @@ class Cellphone(JungoNara):
             if tell_tag.text.strip() == '***-****-****':
                 find_phone = find_phone_num(description_text)
                 if not find_phone:
+                    print("[INFO] 안심번호 사용 중이며 설명에도 번호 없음")
                     return
             is_tell = True
             find_phone = find_phone_num(description_text)
         except:
             find_phone = find_phone_num(description_text)
             if not find_phone:
+                print("[INFO] 번호 추출 실패")
                 return
 
         headers = { 'X-TheCheat-ApiKey': self.api_key }
@@ -115,6 +119,7 @@ class Cellphone(JungoNara):
                 decrypted = thecheatapi.decrypt(resp.json()['content'], self.enc_key)
                 found_fraud_check = json.loads(decrypted).get('caution', 'N')
         except:
+            print("[ERROR] 더치트 API 요청 실패")
             return
 
         is_fraud = fraud_check == 'Y' or found_fraud_check == 'Y'
@@ -145,6 +150,7 @@ class Cellphone(JungoNara):
                 results['상품 상태'], results['결제 방법'], results['배송 방법'], results['거래 지역'],
                 description_text, phone_num, is_fraud, is_find
             ])
+        print(f"[SUCCESS] 수집 완료: {product_name} | {product_price}")
 
         temp_num = 1
         for img in images:
@@ -156,43 +162,7 @@ class Cellphone(JungoNara):
                     f.write(image_bytes)
                 temp_num += 1
             except Exception as e:
-                print(f"Image error: {e}")
+                print(f"[WARNING] 이미지 저장 실패: {e}")
 
         self.driver.switch_to.default_content()
         gc.collect()
-
-if __name__ == "__main__":
-    cellphone_url = [
-        "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=339&search.boardtype=L",
-        "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=427&search.boardtype=L",
-        "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=749&search.boardtype=L",
-        "https://cafe.naver.com/ArticleList.nhn?search.clubid=10050146&search.menuid=424&search.boardtype=L"
-    ]
-    url_cache = URLCache(200)
-    crawl_count = 0
-
-    try:
-        while True:
-            cellphone = Cellphone(cellphone_url)
-            try:
-                new_posts = []
-                for url in utils.listUp(cellphone_url):
-                    full_url = cellphone.jungo_url + url
-                    if not url_cache.is_cached(url):
-                        new_posts.append(full_url)
-                        url_cache.add_to_cache(url)
-
-                for post_url in new_posts:
-                    cellphone.dynamic_crawl(post_url)
-                    crawl_count += 1
-                    if crawl_count >= 1000:
-                        cellphone.driver.quit()
-                        crawl_count = 0
-                        break
-            finally:
-                cellphone.driver.quit()
-                del cellphone
-                gc.collect()
-                time.sleep(randint(30, 60))
-    except KeyboardInterrupt:
-        print("[INFO] 크롤링 중단됨.")
