@@ -6,7 +6,6 @@ from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 import gc
 
-
 import json
 import os
 from dotenv import load_dotenv
@@ -14,12 +13,15 @@ import requests
 import time
 from selenium import webdriver
 import tempfile
+import csv
+import uuid
+import os
 
 from JungoNara import JungoNara
-from src.dbControl.connect_db import connectDB
-from src.dbControl.create_product_table import create_product_table
-from src.dbControl.close_connection import close_connection
-from src.dbControl.insert_product import insert_product
+# from src.dbControl.connect_db import connectDB
+# from src.dbControl.create_product_table import create_product_table
+# from src.dbControl.close_connection import close_connection
+# from src.dbControl.insert_product import insert_product
 from selenium.webdriver.chrome.service import Service
 
 from utils.URLCache import URLCache
@@ -27,6 +29,12 @@ import utils.utils as utils
 import utils.imageToS3 as imageToS3
 import utils.thecheatapi as thecheatapi
 from src.data_processing import find_phone_num
+
+os.makedirs("./data", exist_ok=True)
+os.makedirs("./images", exist_ok=True)
+
+product_id = str(uuid.uuid4())  # 고유 ID
+
 
 class Cellphone(JungoNara):
     def __init__(self, base_url, bucket_name, delay_time=None, saving_html=False):
@@ -251,31 +259,51 @@ class Cellphone(JungoNara):
         #print("db 저장 전화번호 출력", phone_num)
         #print("is_find", is_find)
 
-        # 데이터베이스 연결
-        conn = connectDB()
+        # # 데이터베이스 연결
+        # conn = connectDB()
 
-        # 상품 데이터 삽입
-        # fraud check -> 최근 3개월
-        # MFCC, RNN/LSTM를 활용한 연구 방법을 사용
-        try:
-            product_id = insert_product(conn, 
-                                        "cellphone", 
-                                        product_name, 
-                                        product_price, 
-                                        membership,
-                                        post_date, 
-                                        product_state, 
-                                        trade, 
-                                        delivery, 
-                                        region, 
-                                        description_text, 
-                                        phone_num, 
-                                        is_fraud,
-                                        is_find
-                                    )
-        finally:
-            close_connection(conn)
-        
+        # # 상품 데이터 삽입
+        # # fraud check -> 최근 3개월
+        # # MFCC, RNN/LSTM를 활용한 연구 방법을 사용
+        # try:
+        #     product_id = insert_product(conn, 
+        #                                 "cellphone", 
+        #                                 product_name, 
+        #                                 product_price, 
+        #                                 membership,
+        #                                 post_date, 
+        #                                 product_state, 
+        #                                 trade, 
+        #                                 delivery, 
+        #                                 region, 
+        #                                 description_text, 
+        #                                 phone_num, 
+        #                                 is_fraud,
+        #                                 is_find
+        #                             )
+        # finally:
+        #     close_connection(conn)
+        product_id = str(uuid.uuid4())  # 고유 ID
+
+        # CSV 저장
+        with open("./data/cellphone_products.csv", "a", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                product_id,
+                product_name, 
+                product_price, 
+                membership,
+                post_date, 
+                product_state, 
+                trade, 
+                delivery, 
+                region, 
+                description_text, 
+                phone_num, 
+                is_fraud,
+                is_find
+            ])
+            
         temp_num = 1
         # 이미지 크롤링
         for img in images:
@@ -284,7 +312,9 @@ class Cellphone(JungoNara):
                 image_bytes = imageToS3.download_image(url)
                 file_name = f'cellphone/{product_id}_{temp_num}.jpg'
                 temp_num += 1
-                imageToS3.upload_to_s3(self.bucket_name, image_bytes, file_name)
+                local_path = f"./images/{product_id}_{temp_num}.jpg"
+                with open(local_path, "wb") as f:
+                    f.write(image_bytes)
 
                 # 잔여 메모리 처리
                 del image_bytes
@@ -318,7 +348,7 @@ if __name__ == "__main__":
     conn = connectDB()
     create_product_table(conn)
     conn.close()
-    
+
     crawl_count = 0  # 게시물 크롤링 카운트 초기화
 
     try:
