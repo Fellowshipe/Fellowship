@@ -92,7 +92,7 @@ for feature_type, X_features in tqdm(feature_sets.items()):
         ])
 
         # SMOTE 적용 (훈련 데이터에만)
-        smote = SMOTE(random_state=42)
+        smote_cnn = SMOTE(random_state=42)
         X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
 
         # 모델 학습
