@@ -80,10 +80,24 @@ def Tokenize(data, model_ckpt, batch_size, output_csv):
                 with torch.no_grad():
                     embedding = model(input_ids=input_ids, attention_mask=attention_mask)
                 
-                # CLS 토큰 임베딩 추출
-                cls_embedding = embedding.last_hidden_state[:, 0, :].cpu().numpy().flatten().tolist()
-                embeddings.append(cls_embedding)
-                ids.append(batch_ids[j])
+                last_four_layers = embedding.hidden_states[-4:]  # list of 4 tensors
+
+                # 각 층에 대해 global average pooling
+                pooled_layers = []
+                for layer in last_four_layers:
+                    # layer shape: (batch_size, seq_length, hidden_size)
+                    pooled = layer.mean(dim=1)  # average over seq_length → shape: (batch_size, hidden_size)
+                    pooled_layers.append(pooled)
+                
+                # 4개 층 평균 → shape: (batch_size, hidden_size)
+                avg_embedding = torch.stack(pooled_layers, dim=0).mean(dim=0)  
+                
+                # numpy 변환 및 저장
+                for j in range(avg_embedding.shape[0]):
+                    embedding_vec = avg_embedding[j].cpu().numpy().flatten().tolist()
+                    embeddings.append(embedding_vec)
+                    ids.append(batch_ids[j])
+
 
     # DataFrame으로 id와 임베딩 결과를 저장
     result_df = pd.DataFrame({'id': ids, 'embedding': embeddings})
