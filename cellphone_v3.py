@@ -154,6 +154,7 @@ if __name__ == "__main__":
         cellphone = Cellphone(cellphone_urls, bucket_name)
         new_posts = [cellphone.jungo_url + url for url in utils.listUp(cellphone_urls) if not url_cache.is_cached(url)]
         for post_url in new_posts:
+            print(post_url)
             cellphone._dynamic_crawl(post_url)
             if len(new_posts) >= 1000:
                 break
